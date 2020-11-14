@@ -32,28 +32,26 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\SearchManager.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
 //
 
-IDD_SEARCHMANAGER_DIALOG DIALOGEX 0, 0, 453, 375
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+IDD_SEARCHMANAGER_DIALOG DIALOGEX 0, 0, 453, 371
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Windows Search™ Manager"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,376,11,70,18
-    LTEXT           "",IDC_STATUS,16,21,341,96,SS_NOPREFIX
-    LISTBOX         IDC_ROOTS,16,138,421,73,LBS_SORT | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP
-    LISTBOX         IDC_RULES,16,236,421,73,LBS_SORT | LBS_HASSTRINGS | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL | LBS_NOSEL | WS_VSCROLL | WS_TABSTOP
-    CONTROL         "<a>Windows Search™ properties...</a>",IDC_SYSINDEX,
-                    "SysLink",WS_TABSTOP,7,354,227,14
-    GROUPBOX        "Catalog status:",IDC_NAME,7,7,360,116
+    DEFPUSHBUTTON   "Refresh",IDOK,386,10,60,16
+    GROUPBOX        "Catalog status:",IDC_NAME,7,7,371,116
+    LTEXT           "",IDC_STATUS,16,21,353,96,SS_NOPREFIX
+    CONTROL         "",IDC_LIST,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,129,439,187
     GROUPBOX        "Last indexed item:",IDC_STATIC,7,321,439,29
     LTEXT           "",IDC_INDEX,16,334,421,8,SS_NOPREFIX | SS_WORDELLIPSIS
-    GROUPBOX        "",IDC_GROUP_ROOTS,7,126,439,95
-    GROUPBOX        "",IDC_GROUP_RULES,7,224,439,95
+    CONTROL         "<a>Windows Search™ properties...</a>",IDC_SYSINDEX,
+                    "SysLink",WS_TABSTOP,7,355,227,12
 END
 
 
@@ -63,8 +61,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION 2,0,0,0
+ PRODUCTVERSION 2,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -81,12 +79,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Raspopov"
             VALUE "FileDescription", "Shows Windows Search™ internals."
-            VALUE "FileVersion", "1.0.0.1"
+            VALUE "FileVersion", "2.0.0.0"
             VALUE "InternalName", "SearchManager"
-            VALUE "LegalCopyright", "Copyright © Nikolay Raspopov, 2012-2015."
+            VALUE "LegalCopyright", "Copyright © 2012-2020 Nikolay Raspopov"
             VALUE "OriginalFilename", "SearchManager.exe"
             VALUE "ProductName", "Windows Search™ Manager"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "ProductVersion", "2.0.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -109,14 +107,32 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 446
         VERTGUIDE, 16
-        VERTGUIDE, 357
-        VERTGUIDE, 367
+        VERTGUIDE, 369
+        VERTGUIDE, 378
         VERTGUIDE, 437
         TOPMARGIN, 7
-        BOTTOMMARGIN, 368
+        BOTTOMMARGIN, 364
     END
 END
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_SEARCHMANAGER_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0,
+    100, 0, 0, 0,
+    0, 0, 100, 0,
+    0, 0, 100, 0,
+    0, 0, 100, 100,
+    0, 100, 100, 0,
+    0, 100, 100, 0,
+    0, 100, 0, 0
+END
 
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////

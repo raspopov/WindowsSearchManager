@@ -1,23 +1,24 @@
-//
-// SearchManagerDlg.cpp
-//
-// Search Manager - shows Windows Search internals.
-// Copyright (c) Nikolay Raspopov, 2012-2015.
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
+/*
+This file is part of Search Manager - shows Windows Search internals.
+
+Copyright (C) 2012-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
+
+This program is free software : you can redistribute it and / or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+( at your option ) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.If not, see < http://www.gnu.org/licenses/>.
+*/
 
 #include "stdafx.h"
 #include "SearchManager.h"
@@ -26,6 +27,8 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+enum { GROUP_ID_ROOTS, GROUP_ID_RULES };
 
 const LPCTSTR szStatus[] =
 {
@@ -54,20 +57,20 @@ const LPCTSTR szPausedReason[] =
 };
 
 CSearchManagerDlg::CSearchManagerDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CSearchManagerDlg::IDD, pParent)
+	: CDialog		( CSearchManagerDlg::IDD, pParent )
+	, m_bRefresh	( true )
 {
 	m_hIcon = AfxGetApp()->LoadIcon( IDR_MAINFRAME );
 }
 
 void CSearchManagerDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialog::DoDataExchange(pDX);
+	CDialog::DoDataExchange( pDX );
 
 	DDX_Control( pDX, IDC_STATUS, m_wndStatus );
 	DDX_Control( pDX, IDC_NAME, m_wndName );
 	DDX_Control( pDX, IDC_INDEX, m_wndIndex );
-	DDX_Control( pDX, IDC_ROOTS, m_wndRoots );
-	DDX_Control( pDX, IDC_RULES, m_wndRules );
+	DDX_Control( pDX, IDC_LIST, m_wndList );
 }
 
 BEGIN_MESSAGE_MAP(CSearchManagerDlg, CDialog)
@@ -85,10 +88,25 @@ BOOL CSearchManagerDlg::OnInitDialog()
 	SetIcon( m_hIcon, TRUE );
 	SetIcon( m_hIcon, FALSE );
 
-	SetDlgItemText( IDC_GROUP_ROOTS, _T( "Search roots (\x25A0 - included, \x25CB - excluded):" ) );
-	SetDlgItemText( IDC_GROUP_RULES, _T( "Scope rules (\x25A0 - included, \x25CB - excluded | \x25A0 - default, \x25CB - optional):" ) );
+	CRect rc;
+	m_wndList.GetWindowRect( &rc );
+
+	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT );
+
+	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID, _T("Search roots"), 0, nullptr, 0, GROUP_ID_ROOTS };
+	m_wndList.InsertGroup( 0, &grpRoots );
+	LVGROUP grpRules = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID, _T("Scope rules"), 0, nullptr, 0, GROUP_ID_RULES };
+	m_wndList.InsertGroup( 1, &grpRules );
+	m_wndList.EnableGroupView( TRUE );
+
+	m_wndList.InsertColumn( 0, _T("Name"), LVCFMT_LEFT, rc.Width() - 80 * 3- GetSystemMetrics( SM_CXVSCROLL ) - GetSystemMetrics( SM_CXEDGE ) * 2 );
+	m_wndList.InsertColumn( 1, _T(""), LVCFMT_CENTER, 80 );
+	m_wndList.InsertColumn( 2, _T(""), LVCFMT_CENTER, 80 );
+	m_wndList.InsertColumn( 3, _T(""), LVCFMT_CENTER, 80 );
 
 	ConnectToWDS();
+
+	SetTimer( 1, 1000, nullptr );
 
 	return TRUE;
 }
@@ -126,7 +144,6 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 	if ( nIDEvent == 1 )
 	{
 		CString sStatus, sURL;
-		CList< CString > pRootURLs, pRuleURLs;
 
 		if ( m_pManager )
 		{
@@ -145,7 +162,7 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 				LONG numitems;
 				hr = pCatalog->NumberOfItems( &numitems );
 				if ( SUCCEEDED( hr ) )
-					sStatus.AppendFormat( 
+					sStatus.AppendFormat(
 						_T("Total items      \t\t: %ld\r\n"), numitems );
 
 				LONG pendingitems;
@@ -153,7 +170,7 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 				LONG highpri;
 				hr = pCatalog->NumberOfItemsToIndex( &pendingitems, &queued, &highpri );
 				if ( SUCCEEDED( hr ) )
-					sStatus.AppendFormat( 
+					sStatus.AppendFormat(
 						_T("Pending items      \t: %ld\r\n")
 						_T("Notification queue \t: %ld\r\n")
 						_T("High priority queue\t: %ld\r\n"),
@@ -162,18 +179,18 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 				DWORD timeout = 0;
 				hr = pCatalog->get_ConnectTimeout( &timeout );
 				if ( SUCCEEDED( hr ) )
-					sStatus.AppendFormat( _T("Connect timeout     \t: %ld s\r\n"), timeout );
+					sStatus.AppendFormat( _T("Connect timeout     \t: %lu s\r\n"), timeout );
 
 				timeout = 0;
 				hr = pCatalog->get_DataTimeout( &timeout );
 				if ( SUCCEEDED( hr ) )
-					sStatus.AppendFormat( _T("Data timeout        \t: %ld s\r\n"), timeout );
+					sStatus.AppendFormat( _T("Data timeout        \t: %lu s\r\n"), timeout );
 
 				BOOL diacritic = FALSE;
 				hr = pCatalog->get_DiacriticSensitivity( &diacritic );
 				if ( SUCCEEDED( hr ) )
 					sStatus.AppendFormat( _T("Diacritic sensitivity\t: %s\r\n"), ( diacritic ? _T("yes") : _T("no") ) );
-	
+
 				CatalogStatus status;
 				CatalogPausedReason reason;
 				hr = pCatalog->GetCatalogStatus( &status, &reason );
@@ -188,74 +205,25 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 					}
 				}
 
-				CComPtr< ISearchCrawlScopeManager > pScope;
-				hr = pCatalog->GetCrawlScopeManager( &pScope );
-				if ( SUCCEEDED( hr ) )
+				if ( m_bRefresh )
 				{
-					// Roots
+					m_bRefresh = false;
+
+					m_wndList.DeleteAllItems();
+
+					CComPtr< ISearchCrawlScopeManager > pScope;
+					hr = pCatalog->GetCrawlScopeManager( &pScope );
+					if ( SUCCEEDED( hr ) )
 					{
-						CComPtr< IEnumSearchRoots > pRoots;
-						hr = pScope->EnumerateRoots( &pRoots );
-						if ( SUCCEEDED( hr ) )
-						{
-							for (;;)
-							{
-								CComPtr< ISearchRoot > pRoot;
-								hr = pRoots->Next( 1, &pRoot, NULL );
-								if ( hr != S_OK )
-									break;
+						// Roots
+						EnumerateRoots( pScope );
 
-								LPWSTR szURL = NULL;
-								hr = pRoot->get_RootURL( &szURL );
-								if ( SUCCEEDED( hr ) )
-								{
-									BOOL bIncluded = FALSE;
-									pScope->IncludedInCrawlScope( szURL, &bIncluded );
-
-									CString sScopeURL;
-									sScopeURL.Format( _T("%s %s"), ( bIncluded ? _T("\x25A0") : _T("\x25CB") ), szURL ); 
-									pRootURLs.AddTail( sScopeURL );
-
-									CoTaskMemFree( szURL );
-								}
-							}
-						}
+						// Rules
+						EnumerateScopeRules( pScope );
 					}
-
-					// Rules
-					{
-						CComPtr< IEnumSearchScopeRules > pRules;
-						hr = pScope->EnumerateScopeRules( &pRules );
-						if ( SUCCEEDED( hr ) )
-						{
-							for (;;)
-							{
-								CComPtr< ISearchScopeRule > pRule;
-								hr = pRules->Next( 1, &pRule, NULL );
-								if ( hr != S_OK )
-									break;
-
-								LPWSTR szURL = NULL;
-								hr = pRule->get_PatternOrURL( &szURL );
-								if ( SUCCEEDED( hr ) )
-								{
-									BOOL bIncluded = FALSE;
-									pRule->get_IsIncluded( &bIncluded );
-									BOOL bDefault = FALSE;
-									pRule->get_IsDefault( &bDefault );
-
-									CString sRuleURL;
-									sRuleURL.Format( _T("%s | %s %s"), ( bIncluded ? _T("\x25A0") : _T("\x25CB") ), ( bDefault ? _T("\x25A0") : _T("\x25CB") ), szURL ); 
-									pRuleURLs.AddTail( sRuleURL );
-
-									CoTaskMemFree( szURL );
-								}
-							}
-						}
-						}
 				}
 
-				LPWSTR szURL = NULL;
+				LPWSTR szURL = nullptr;
 				hr = pCatalog->URLBeingIndexed( &szURL );
 				if ( SUCCEEDED( hr ) )
 				{
@@ -277,7 +245,7 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 
 		if ( ! m_pManager )
 		{
-			sStatus = _T("Connection to Windos Search\x2122 has been closed. Please restart this application...");
+			sStatus = _T("Connection to Windows Search\x2122 has been closed. Please restart this application...");
 		}
 
 		// Output (cached)
@@ -292,48 +260,6 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 		{
 			m_sURLCache = sURL;
 			m_wndIndex.SetWindowText( m_sURLCache );
-		}
-
-		{
-			CList< CString > pRootURLsDelete;
-			pRootURLsDelete.AddTail( &m_pRootURLsCache );
-			for ( POSITION pos = pRootURLs.GetHeadPosition(); pos; )
-			{
-				CString sURL = pRootURLs.GetNext( pos );
-				POSITION posOld = pRootURLsDelete.Find( sURL );
-				if ( posOld )
-					pRootURLsDelete.RemoveAt( posOld );
-				else
-					m_wndRoots.AddString( sURL );
-			}
-			for ( POSITION pos = pRootURLsDelete.GetHeadPosition(); pos; )
-			{
-				CString sRootURLDelete = pRootURLsDelete.GetNext( pos );
-				m_wndRoots.DeleteString( m_wndRoots.FindString( 0, sRootURLDelete ) );
-			}
-			m_pRootURLsCache.RemoveAll();
-			m_pRootURLsCache.AddTail( &pRootURLs );
-		}
-
-		{
-			CList< CString > pRuleURLsDelete;
-			pRuleURLsDelete.AddTail( &m_pRuleURLsCache );
-			for ( POSITION pos = pRuleURLs.GetHeadPosition(); pos; )
-			{
-				CString sURL = pRuleURLs.GetNext( pos );
-				POSITION posOld = pRuleURLsDelete.Find( sURL );
-				if ( posOld )
-					pRuleURLsDelete.RemoveAt( posOld );
-				else
-					m_wndRules.AddString( sURL );
-			}
-			for ( POSITION pos = pRuleURLsDelete.GetHeadPosition(); pos; )
-			{
-				CString sURLDelete = pRuleURLsDelete.GetNext( pos );
-				m_wndRules.DeleteString( m_wndRules.FindString( 0, sURLDelete ) );
-			}
-			m_pRuleURLsCache.RemoveAll();
-			m_pRuleURLsCache.AddTail( &pRuleURLs );
 		}
 	}
 
@@ -354,7 +280,7 @@ void CSearchManagerDlg::ConnectToWDS()
 	HRESULT hr = m_pManager.CoCreateInstance( __uuidof( CSearchManager ) );
 	if ( SUCCEEDED( hr ) )
 	{
-		LPWSTR szVersion = NULL;
+		LPWSTR szVersion = nullptr;
 		hr = m_pManager->GetIndexerVersionStr( &szVersion );
 		if ( SUCCEEDED( hr ) )
 		{
@@ -362,10 +288,6 @@ void CSearchManagerDlg::ConnectToWDS()
 			GetWindowText( sTitle );
 			SetWindowText( sTitle + _T(" - Indexer version: ") + szVersion );
 			CoTaskMemFree( szVersion );
-
-			SetTimer( 1, 500, NULL );
-
-			PostMessage( WM_TIMER, 1, 0 );
 		}
 		else
 			m_wndStatus.SetWindowText( m_sStatusCache = _T("Can't get Windows Search\x2122 version.") );
@@ -383,9 +305,131 @@ void CSearchManagerDlg::OnNMClickSysindex(NMHDR * /*pNMHDR*/, LRESULT *pResult)
 	sSys.ReleaseBuffer();
 	sSys += _T("\\system32\\");
 
-	ShellExecute( GetSafeHwnd(), NULL, sSys + _T("control.exe"), _T(" /name Microsoft.IndexingOptions"), sSys, SW_SHOWDEFAULT );
+	ShellExecute( GetSafeHwnd(), nullptr, sSys + _T("control.exe"), _T(" /name Microsoft.IndexingOptions"), sSys, SW_SHOWDEFAULT );
 
 	Sleep( 1000 );
 
 	*pResult = 0;
+}
+
+void CRoot::InsertTo(CListCtrl& list)
+{
+	LVITEM item = { LVIF_TEXT | LVIF_GROUPID };
+	item.iItem = list.GetItemCount();
+	item.iGroupId = GROUP_ID_ROOTS;
+	item.pszText = const_cast< LPTSTR >( static_cast< LPCTSTR >( RootURL ) );
+	item.iItem = list.InsertItem( &item );
+	item.mask = LVIF_TEXT;
+
+	++ item.iSubItem;
+	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? _T("In Scope") : _T("") );
+	list.SetItem( &item );
+
+	++ item.iSubItem;
+	item.pszText = const_cast< LPTSTR >( IsHierarchical ? _T("Hierarchical") : _T("") );
+	list.SetItem( &item );
+
+	++ item.iSubItem;
+	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? _T("Notify") : _T("") );
+	list.SetItem( &item );
+}
+
+HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
+{
+	CComPtr< IEnumSearchRoots > pRoots;
+	HRESULT hr = pScope->EnumerateRoots( &pRoots );
+	if ( SUCCEEDED( hr ) )
+	{
+		for (;;)
+		{
+			CComPtr< ISearchRoot > pRoot;
+			hr = pRoots->Next( 1, &pRoot, nullptr );
+			if ( hr != S_OK )
+			{
+				break;
+			}
+
+			LPWSTR szURL = nullptr;
+			hr = pRoot->get_RootURL( &szURL );
+			if ( SUCCEEDED( hr ) )
+			{
+				CRoot root( szURL );
+
+				hr = pScope->IncludedInCrawlScope( root.RootURL, &root.IncludedInCrawlScope );
+				ASSERT( SUCCEEDED( hr ) );
+
+				hr = pRoot->get_IsHierarchical( &root.IsHierarchical );
+				ASSERT( SUCCEEDED( hr ) );
+
+				hr = pRoot->get_ProvidesNotifications( &root.ProvidesNotifications );
+				ASSERT( SUCCEEDED( hr ) );
+
+				root.InsertTo( m_wndList );
+
+				CoTaskMemFree( szURL );
+			}
+		}
+	}
+
+	return hr;
+}
+
+void CRule::InsertTo(CListCtrl& list)
+{
+	LVITEM item = { LVIF_TEXT | LVIF_GROUPID };
+	item.iItem = list.GetItemCount();
+	item.iGroupId = GROUP_ID_RULES;
+	item.pszText = const_cast< LPTSTR >( static_cast< LPCTSTR >( PatternOrURL ) );
+	item.iItem = list.InsertItem( &item );
+	item.mask = LVIF_TEXT;
+
+	++ item.iSubItem;
+	item.pszText = const_cast< LPTSTR >( IsIncluded ? _T("Included") : _T("Excluded") );
+	list.SetItem( &item );
+
+	++ item.iSubItem;
+	item.pszText = const_cast< LPTSTR >( IsDefault ? _T("Default") : _T("") );
+	list.SetItem( &item );
+}
+
+HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
+{
+	CComPtr< IEnumSearchScopeRules > pRules;
+	HRESULT hr = pScope->EnumerateScopeRules( &pRules );
+	if ( SUCCEEDED( hr ) )
+	{
+		for (;;)
+		{
+			CComPtr< ISearchScopeRule > pRule;
+			hr = pRules->Next( 1, &pRule, nullptr );
+			if ( hr != S_OK )
+			{
+				break;
+			}
+
+			LPWSTR szURL = nullptr;
+			hr = pRule->get_PatternOrURL( &szURL );
+			if ( SUCCEEDED( hr ) )
+			{
+				CRule rule( szURL );
+
+				hr = pRule->get_IsIncluded( &rule.IsIncluded );
+				ASSERT( SUCCEEDED( hr ) );
+
+				hr = pRule->get_IsDefault( &rule.IsDefault );
+				ASSERT( SUCCEEDED( hr ) );
+
+				rule.InsertTo( m_wndList );
+
+				CoTaskMemFree( szURL );
+			}
+		}
+	}
+
+	return hr;
+}
+
+void CSearchManagerDlg::OnOK()
+{
+	m_bRefresh = true;
 }
