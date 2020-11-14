@@ -1,0 +1,7 @@
+//
+// SearchManager.RC2 - ресурсы, не редактируемые непосредственно в Microsoft Visual C++
+//
+
+#ifdef APSTUDIO_INVOKED
+#error этот файл нельзя редактировать в Microsoft Visual C++
+#endif //APSTUDIO_INVOKED
