@@ -45,16 +45,35 @@ BOOL CSearchManagerApp::InitInstance()
 
 	CWinApp::InitInstance();
 
-	SetRegistryKey( _T("Raspopov") );
+	CoInitializeEx( nullptr, COINIT_MULTITHREADED );
 
-	HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
-	if ( SUCCEEDED( hr ) )
+	SetRegistryKey( AFX_IDS_COMPANY_NAME );
+
 	{
 		CSearchManagerDlg dlg;
 		m_pMainWnd = &dlg;
 		dlg.DoModal();
 	}
+
 	CoUninitialize();
 
 	return FALSE;
+}
+
+BOOL CSearchManagerApp::ProcessMessageFilter(int code, LPMSG lpMsg)
+{
+	CSearchManagerDlg* pMainWnd = static_cast< CSearchManagerDlg* >( m_pMainWnd );
+	if ( pMainWnd && ( lpMsg->hwnd == pMainWnd->m_hWnd || ::IsChild( pMainWnd->m_hWnd, lpMsg->hwnd ) ) )
+	{
+		if ( lpMsg->message == WM_KEYDOWN )
+		{
+			// Emulate key down message for dialog
+			if ( pMainWnd->OnKeyDown( (UINT)lpMsg->wParam, (UINT)( lpMsg->lParam & 0xffff ), (UINT)( ( lpMsg->lParam >> 16 ) & 0xffff ) ) )
+			{
+				return TRUE;
+			}
+		}
+	}
+
+	return CWinApp::ProcessMessageFilter( code, lpMsg );
 }

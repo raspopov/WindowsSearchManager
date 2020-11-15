@@ -194,6 +194,7 @@
     <None Include="res\SearchManager.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Item.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SearchManager.h" />
     <ClInclude Include="SearchManagerDlg.h" />
@@ -201,6 +202,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Item.cpp" />
     <ClCompile Include="SearchManager.cpp" />
     <ClCompile Include="SearchManagerDlg.cpp" />
     <ClCompile Include="stdafx.cpp">

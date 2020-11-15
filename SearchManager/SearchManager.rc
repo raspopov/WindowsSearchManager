@@ -17,10 +17,10 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Neutral resources
+// Neutral (Default) resources
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
-LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 #pragma code_page(1251)
 
 /////////////////////////////////////////////////////////////////////////////
@@ -75,7 +75,7 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "000004b0"
+        BLOCK "040004b0"
         BEGIN
             VALUE "CompanyName", "Raspopov"
             VALUE "FileDescription", "Shows Windows Search™ internals."
@@ -89,7 +89,7 @@ BEGIN
     END
     BLOCK "VarFileInfo"
     BEGIN
-        VALUE "Translation", 0x0, 1200
+        VALUE "Translation", 0x400, 1200
     END
 END
 
@@ -134,7 +134,25 @@ BEGIN
     0, 100, 0, 0
 END
 
-#endif    // Neutral resources
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    AFX_IDS_APP_TITLE       "Search Manager"
+    AFX_IDS_COMPANY_NAME    "Raspopov"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_DELETING            "Deleting..."
+    IDS_CONNECTING          "Connecting to Windows Search..."
+END
+
+#endif    // Neutral (Default) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

@@ -28,6 +28,7 @@ public:
 
 protected:
 	BOOL InitInstance() override;
+	BOOL ProcessMessageFilter(int code, LPMSG lpMsg) override;
 
 	DECLARE_MESSAGE_MAP()
 };

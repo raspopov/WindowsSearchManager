@@ -19,41 +19,43 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-class CRoot
+#include "Item.h"
+
+class CLock
 {
 public:
-	inline CRoot(LPCWSTR szRootURL)
-		: RootURL				( szRootURL )
-		, IncludedInCrawlScope	( FALSE )
-		, IsHierarchical		( FALSE )
-		, ProvidesNotifications	( FALSE )
+	inline CLock(bool* lock) noexcept
+		: m_p		( lock )
+		, m_locked	( false )
 	{
 	}
 
-	void InsertTo(CListCtrl& list);
-
-	CString RootURL;			// The URL of the starting point for this search root
-	BOOL IncludedInCrawlScope;	// An indicator of whether the specified URL is included in the crawl scope
-	BOOL IsHierarchical;		// Indicates whether the search is rooted on a hierarchical tree structure
-	BOOL ProvidesNotifications;	// Indicates whether the search engine is notified (by protocol handlers or other applications) about changes to the URLs under the search root
-};
-
-class CRule
-{
-public:
-	inline CRule(LPCWSTR szPatternOrURL)
-		: PatternOrURL			( szPatternOrURL )
-		, IsIncluded			( FALSE )
-		, IsDefault				( FALSE )
+	inline bool Lock() noexcept
 	{
+		if ( *m_p )
+		{
+			return false;
+		}
+		else
+		{
+			*m_p = m_locked = true;
+			return true;
+		}
 	}
 
-	void InsertTo(CListCtrl& list);
+	inline ~CLock() noexcept
+	{
+		if ( m_locked )
+		{
+			*m_p = false;
+		}
+	}
 
-	CString PatternOrURL;		// The pattern or URL for the rule
-	BOOL IsIncluded;			// A value identifying whether this rule is an inclusion rule
-	BOOL IsDefault;				// Identifies whether this is a default rule
+private:
+	bool* m_p;
+	bool  m_locked;
 };
+
 
 class CSearchManagerDlg : public CDialog
 {
@@ -61,6 +63,9 @@ public:
 	CSearchManagerDlg(CWnd* pParent = nullptr);
 
 	enum { IDD = IDD_SEARCHMANAGER_DIALOG };
+
+	// Pass key down event from application to dialog
+	BOOL OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 
 protected:
 	HICON m_hIcon;
@@ -70,13 +75,28 @@ protected:
 	CListCtrl m_wndList;
 
 	CString m_sStatusCache;
-	CString m_sURLCache;
+	CString m_sIndexCache;
+	bool m_bInUse;
 	bool m_bRefresh;
-	CComPtr< ISearchManager > m_pManager;
 
-	void ConnectToWDS();
+	CComPtr< ISearchManager > m_pManager;
+	CComPtr< ISearchCatalogManager > m_pCatalog;
+	CComPtr< ISearchCrawlScopeManager > m_pScope;
+
+	void Disconnect();
 	HRESULT EnumerateRoots(ISearchCrawlScopeManager* pScope);
 	HRESULT EnumerateScopeRules(ISearchCrawlScopeManager* pScope);
+
+	void SetStatus(UINT nStatus);
+	void SetStatus(const CString& sStatus);
+	void SetIndex(UINT nIndex);
+	void SetIndex(const CString& sIndex);
+
+	// Update interface
+	void OnUpdate();
+
+	// Delete key pressed
+	void OnDelete();
 
 	BOOL OnInitDialog() override;
 	void DoDataExchange(CDataExchange* pDX) override;
@@ -87,6 +107,7 @@ protected:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnDestroy();
 	afx_msg void OnNMClickSysindex(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnLvnDeleteitemList( NMHDR *pNMHDR, LRESULT *pResult );
 
 	DECLARE_MESSAGE_MAP()
 };
