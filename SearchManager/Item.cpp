@@ -6,6 +6,8 @@ This file is part of Search Manager - shows Windows Search internals.
 
 Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
+https://github.com/raspopov/WindowsSearchManager
+
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
