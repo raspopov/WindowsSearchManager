@@ -103,6 +103,8 @@ struct error_t
 	}
 };
 
+IMPLEMENT_DYNAMIC(CSearchManagerDlg, CDialogExSized)
+
 CSearchManagerDlg::CSearchManagerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogExSized		( CSearchManagerDlg::IDD, pParent )
 	, m_bRefresh	( true )

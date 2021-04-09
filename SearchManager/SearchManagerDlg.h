@@ -60,6 +60,8 @@ private:
 
 class CSearchManagerDlg : public CDialogExSized
 {
+	DECLARE_DYNAMIC(CSearchManagerDlg)
+
 public:
 	CSearchManagerDlg(CWnd* pParent = nullptr);
 	virtual ~CSearchManagerDlg() = default;
@@ -76,7 +78,6 @@ protected:
 	CStatic			m_wndIndex;
 	CListCtrl		m_wndList;
 	CMFCMenuButton	m_btnAdd;
-	CMenu			m_Menu;
 
 	CString			m_sStatusCache;
 	CString			m_sIndexCache;

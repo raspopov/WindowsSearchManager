@@ -94,13 +94,14 @@ BEGIN
     BEGIN
         BLOCK "040004b0"
         BEGIN
+            VALUE "Comments", "https://github.com/raspopov/WindowsSearchManager"
             VALUE "CompanyName", "Raspopov"
-            VALUE "FileDescription", "Shows Windows Search™ internals."
+            VALUE "FileDescription", "Utility to manage a Windows Search™ internals."
             VALUE "FileVersion", "2.0.0.0"
-            VALUE "InternalName", "SearchManager"
+            VALUE "InternalName", "Search Manager"
             VALUE "LegalCopyright", "Copyright © 2012-2021 Nikolay Raspopov"
             VALUE "OriginalFilename", "SearchManager.exe"
-            VALUE "ProductName", "Windows Search™ Manager"
+            VALUE "ProductName", "Search Manager"
             VALUE "ProductVersion", "2.0.0.0"
         END
     END
