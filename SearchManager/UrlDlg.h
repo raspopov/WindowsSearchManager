@@ -19,25 +19,46 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "resource.h"
+// CBrowseCtrl
 
-class CSearchManagerApp : public CWinAppEx
+class CBrowseCtrl : public CMFCEditBrowseCtrl
 {
+	DECLARE_DYNAMIC(CBrowseCtrl)
+
 public:
-	CSearchManagerApp();
+	virtual ~CBrowseCtrl() = default;
 
 protected:
-	BOOL InitInstance() override;
-	BOOL ProcessMessageFilter(int code, LPMSG lpMsg) override;
+	void OnAfterUpdate() override;
 
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CSearchManagerApp theApp;
+// CUrlDialog dialog
 
-inline CString LoadString(UINT nID)
+class CUrlDialog : public CDialogEx
 {
-	CString str;
-	VERIFY( str.LoadString( nID ) );
-	return str;
-}
+	DECLARE_DYNAMIC(CUrlDialog)
+
+public:
+	CUrlDialog(const CString& sTitle, CWnd* pParent = nullptr);   // standard constructor
+	virtual ~CUrlDialog() = default;
+
+	enum { IDD = IDD_URL_DIALOG };
+
+	CString	m_sTitle;
+	CString m_sURL;
+
+	// Check if URL has no data
+	bool IsEmpty() const noexcept;
+
+protected:
+	CBrowseCtrl m_wndUrl;
+
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	virtual BOOL OnInitDialog();
+
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+
+	DECLARE_MESSAGE_MAP()
+};

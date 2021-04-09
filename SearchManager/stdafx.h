@@ -40,10 +40,17 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <afxwin.h>
 #include <afxext.h>
 #include <afxcmn.h>
-#include <afxdisp.h>
 
 #include <searchapi.h>
 #include <shlobj.h>
+#include <sddl.h>
+
+#include <afxcontextmenumanager.h>
+#include <afxwinappex.h>
+#include <afxdialogex.h>
+#include <afxmenubutton.h>
+#include <afxvisualmanagerwindows.h>
+#include <afxeditbrowsectrl.h>
 
 #include <ntquery.h>
 #pragma comment( lib,"ntquery.lib" )

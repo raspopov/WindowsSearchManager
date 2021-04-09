@@ -4,7 +4,7 @@
 /*
 This file is part of Search Manager - shows Windows Search internals.
 
-Copyright (C) 2012-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -28,26 +28,37 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #define new DEBUG_NEW
 #endif
 
-BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinApp)
-	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
+BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinAppEx)
+	ON_COMMAND(ID_HELP, &CWinAppEx::OnHelp)
 END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
 {
+	EnableHtmlHelp();
+
+	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 }
 
 CSearchManagerApp theApp;
 
 BOOL CSearchManagerApp::InitInstance()
 {
-	const INITCOMMONCONTROLSEX InitCtrls = { sizeof( INITCOMMONCONTROLSEX ), ICC_WIN95_CLASSES };
+	const INITCOMMONCONTROLSEX InitCtrls = { sizeof( INITCOMMONCONTROLSEX ), ICC_WIN95_CLASSES | ICC_USEREX_CLASSES | ICC_STANDARD_CLASSES | ICC_LINK_CLASS };
 	InitCommonControlsEx( &InitCtrls );
 
-	CWinApp::InitInstance();
+	SetAppID( AfxGetAppName() );
 
-	CoInitializeEx( nullptr, COINIT_MULTITHREADED );
+	CWinAppEx::InitInstance();
+
+	CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE );
 
 	SetRegistryKey( AFX_IDS_COMPANY_NAME );
+
+	EnableTaskbarInteraction();
+
+	InitContextMenuManager();
+
+	CMFCVisualManager::SetDefaultManager( RUNTIME_CLASS( CMFCVisualManagerWindows ) );
 
 	{
 		CSearchManagerDlg dlg;
@@ -68,12 +79,12 @@ BOOL CSearchManagerApp::ProcessMessageFilter(int code, LPMSG lpMsg)
 		if ( lpMsg->message == WM_KEYDOWN )
 		{
 			// Emulate key down message for dialog
-			if ( pMainWnd->OnKeyDown( (UINT)lpMsg->wParam, (UINT)( lpMsg->lParam & 0xffff ), (UINT)( ( lpMsg->lParam >> 16 ) & 0xffff ) ) )
+			if ( pMainWnd->OnKeyDown( (UINT)lpMsg->wParam, ( lpMsg->lParam & 0xffff ), ( ( lpMsg->lParam >> 16 ) & 0xffff ) ) )
 			{
 				return TRUE;
 			}
 		}
 	}
 
-	return CWinApp::ProcessMessageFilter( code, lpMsg );
+	return CWinAppEx::ProcessMessageFilter( code, lpMsg );
 }

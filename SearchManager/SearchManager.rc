@@ -38,20 +38,37 @@ IDR_MAINFRAME           ICON                    "res\\SearchManager.ico"
 // Dialog
 //
 
-IDD_SEARCHMANAGER_DIALOG DIALOGEX 0, 0, 453, 371
-STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+IDD_SEARCHMANAGER_DIALOG DIALOGEX 0, 0, 453, 390
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "Windows Search™ Manager"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "Refresh",IDOK,386,10,60,16
-    GROUPBOX        "Catalog status:",IDC_NAME,7,7,371,116
-    LTEXT           "",IDC_STATUS,16,21,353,96,SS_NOPREFIX
-    CONTROL         "",IDC_LIST,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,129,439,187
-    GROUPBOX        "Last indexed item:",IDC_STATIC,7,321,439,29
-    LTEXT           "",IDC_INDEX,16,334,421,8,SS_NOPREFIX | SS_WORDELLIPSIS
+    DEFPUSHBUTTON   "Refresh",IDOK,386,8,60,16
+    PUSHBUTTON      "Reindex...",IDC_REINDEX,386,27,60,16
+    PUSHBUTTON      "Reset...",IDC_RESET,386,46,60,16
+    PUSHBUTTON      "Default...",IDC_DEFAULT,386,65,60,16
+    CONTROL         "Add...",IDC_ADD,"MfcMenuButton",WS_TABSTOP,386,84,60,16
+    PUSHBUTTON      "Edit...",IDC_EDIT,386,103,60,16
+    PUSHBUTTON      "Delete...",IDC_DELETE,386,122,60,16
+    GROUPBOX        "Windows Search™ status",IDC_NAME,7,7,371,129
+    LTEXT           "",IDC_STATUS,16,21,353,107,SS_NOPREFIX
+    CONTROL         "",IDC_LIST,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,145,439,187
+    GROUPBOX        "Last indexed",IDC_STATIC,7,337,439,29
+    LTEXT           "",IDC_INDEX,16,350,421,8,SS_NOPREFIX | SS_WORDELLIPSIS
     CONTROL         "<a>Windows Search™ properties...</a>",IDC_SYSINDEX,
-                    "SysLink",WS_TABSTOP,7,355,227,12
+                    "SysLink",WS_TABSTOP,7,371,227,12
+END
+
+IDD_URL_DIALOG DIALOGEX 0, 0, 323, 104
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,190,81,60,16
+    PUSHBUTTON      "Cancel",IDCANCEL,256,81,60,16
+    CONTROL         "",IDC_BROWSER,"MfcEditBrowse",WS_BORDER | WS_TABSTOP | 0x80,7,7,309,14
+    LTEXT           "Default scope rules provide an initial set of scope rules. User scope rules always take precedence over default scope rules, unless user-defined rules are reverted in which case the default scope rules are reinstated.",IDC_STATIC,7,48,309,30
+    LTEXT           "A scope rule can be a fully qualified URL or a rule with a pattern.",IDC_STATIC,7,24,309,8
+    LTEXT           "The typical URL structure is: {protocol} :// {user SID or storage} / {path} /",IDC_STATIC,7,36,309,8
 END
 
 
@@ -81,7 +98,7 @@ BEGIN
             VALUE "FileDescription", "Shows Windows Search™ internals."
             VALUE "FileVersion", "2.0.0.0"
             VALUE "InternalName", "SearchManager"
-            VALUE "LegalCopyright", "Copyright © 2012-2020 Nikolay Raspopov"
+            VALUE "LegalCopyright", "Copyright © 2012-2021 Nikolay Raspopov"
             VALUE "OriginalFilename", "SearchManager.exe"
             VALUE "ProductName", "Windows Search™ Manager"
             VALUE "ProductVersion", "2.0.0.0"
@@ -111,7 +128,15 @@ BEGIN
         VERTGUIDE, 378
         VERTGUIDE, 437
         TOPMARGIN, 7
-        BOTTOMMARGIN, 364
+        BOTTOMMARGIN, 383
+    END
+
+    IDD_URL_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 316
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 97
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -126,12 +151,89 @@ IDD_SEARCHMANAGER_DIALOG AFX_DIALOG_LAYOUT
 BEGIN
     0,
     100, 0, 0, 0,
+    100, 0, 0, 0,
+    100, 0, 0, 0,
+    100, 0, 0, 0,
+    100, 0, 0, 0,
+    100, 0, 0, 0,
+    100, 0, 0, 0,
     0, 0, 100, 0,
     0, 0, 100, 0,
     0, 0, 100, 100,
     0, 100, 100, 0,
     0, 100, 100, 0,
     0, 100, 0, 0
+END
+
+IDD_URL_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_SEARCHMANAGER_DIALOG DLGINIT
+BEGIN
+    IDC_ADD, 0x37c, 283, 0
+0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x4f5f, 0x4d53, 
+0x6e65, 0x3e75, 0x4146, 0x534c, 0x3c45, 0x4d2f, 0x4346, 0x654d, 0x756e, 
+0x7542, 0x7474, 0x6e6f, 0x4f5f, 0x4d53, 0x6e65, 0x3e75, 0x4d3c, 0x4346, 
+0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x525f, 0x6769, 0x7468, 0x7241, 
+0x6f72, 0x3e77, 0x4146, 0x534c, 0x3c45, 0x4d2f, 0x4346, 0x654d, 0x756e, 
+0x7542, 0x7474, 0x6e6f, 0x525f, 0x6769, 0x7468, 0x7241, 0x6f72, 0x3e77, 
+0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x535f, 0x6174, 
+0x5079, 0x6572, 0x7373, 0x6465, 0x463e, 0x4c41, 0x4553, 0x2f3c, 0x464d, 
+0x4d43, 0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 0x7453, 0x7961, 0x7250, 
+0x7365, 0x6573, 0x3e64, 0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 
+0x6e6f, 0x445f, 0x6665, 0x7561, 0x746c, 0x6c43, 0x6369, 0x3e6b, 0x5254, 
+0x4555, 0x2f3c, 0x464d, 0x4d43, 0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 
+0x6544, 0x6166, 0x6c75, 0x4374, 0x696c, 0x6b63, 0x3c3e, 0x464d, 0x4d43, 
+0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 0x7541, 0x6f74, 0x6973, 0x657a, 
+0x463e, 0x4c41, 0x4553, 0x2f3c, 0x464d, 0x4d43, 0x6e65, 0x4275, 0x7475, 
+0x6f74, 0x5f6e, 0x7541, 0x6f74, 0x6973, 0x657a, "\076" 
+    0
+END
+
+IDD_URL_DIALOG DLGINIT
+BEGIN
+    IDC_BROWSER, 0x37c, 42, 0
+0x4d3c, 0x4346, 0x6445, 0x7469, 0x7242, 0x776f, 0x6573, 0x4d5f, 0x646f, 
+0x3e65, 0x3c32, 0x4d2f, 0x4346, 0x6445, 0x7469, 0x7242, 0x776f, 0x6573, 
+0x4d5f, 0x646f, 0x3e65, 
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_ADD_MENU MENU
+BEGIN
+    POPUP "0"
+    BEGIN
+        MENUITEM "Include default scope...",    ID_INCLUDE_DEFAULT_SCOPE
+        MENUITEM "Exclude default scope...",    ID_EXCLUDE_DEFAULT_SCOPE
+        MENUITEM SEPARATOR
+        MENUITEM "Include user scope...",       ID_INCLUDE_USER_SCOPE
+        MENUITEM "Exclude user scope...",       ID_EXCLUDE_USER_SCOPE
+    END
+END
+
+IDR_LIST_MENU MENU
+BEGIN
+    POPUP "0"
+    BEGIN
+        MENUITEM "Copy",                        ID_COPY
+        MENUITEM SEPARATOR
+        MENUITEM "Edit...",                     ID_EDIT
+        MENUITEM "Delete...",                   ID_DELETE
+    END
 END
 
 
@@ -149,7 +251,48 @@ END
 STRINGTABLE
 BEGIN
     IDS_DELETING            "Deleting..."
-    IDS_CONNECTING          "Connecting to Windows Search..."
+    IDS_CONNECTING          "Connecting to Windows Search™..."
+    IDS_DELETE_CONFIRM      "Are you about to delete %u selected item(s) from the index?"
+    IDS_GETTING_CATALOG     "Getting catalog..."
+    IDS_STATUS_1            "Index is current; no indexing needed. Queries can be processed."
+    IDS_STATUS_2            "Indexer is paused. This can happen either because the user paused indexing or the indexer back-off criteria have been met. Queries can be processed."
+    IDS_STATUS_3            "Index is recovering; queries and indexing are processed while in this state."
+    IDS_STATUS_4            "Indexer is currently executing a full crawl and will index everything it is configured to index. Queries can be processed while indexing."
+    IDS_STATUS_5            "Indexer is preforming a crawl to see if anything has changed or requires indexing. Queries can be processed while indexing."
+    IDS_STATUS_6            "Indexer is processing the notification queue. This is done before resuming any crawl."
+    IDS_STATUS_7            "Indexer is shutting down and is not indexing. Indexer can't be queried."
+    IDS_CLOSED              "Connection to Windows Search™ has been closed. Please press Refresh button..."
+    IDS_ADMIN               "Administrative privileges required."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_ENUMERATING         "Enumerating roots and scope rules..."
+    IDS_DISCONNECTING       "Disconnecting..."
+    IDS_ROOTS               "Search roots"
+    IDS_RULES               "Scope rules"
+    IDS_ADD_ROOT            "Add new search scope (%s, %s):"
+    IDS_ADD_ERROR           "Add failed.\n\n%s\n\nCode: %s"
+    IDS_REINDEX_CONFIRM     "Are you about to reindex all URLs in the index?\n\nOld information remains in the catalog until replaced by new information during re-indexing."
+    IDS_DEFAULT_CONFIRM     "Are you about to remove all user-defined rules (""User"") and revert the working set of crawls scope rules to the default rules (""Default"")?"
+    IDS_RESET_CONFIRM       "Are you about to reset the underlying catalog by rebuilding databases and performing a full indexing?\n\nResetting can take a very long time, during which little or no information is available to be searched."
+    IDS_EDIT_ROOT           "Edit existing search scope (%s, %s):"
+    IDS_UNKNOWN_ERROR       "Unknown error."
+    IDS_ERROR_CODE          "Result: 0x%08x"
+    IDS_REASON_1            "Paused due to high I/O."
+    IDS_REASON_2            "Paused due to high CPU usage."
+    IDS_REASON_3            "Paused due to high NTF rate."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_REASON_4            "Paused due to low battery."
+    IDS_REASON_5            "Paused due to low memory."
+    IDS_REASON_6            "Paused due to low disk space."
+    IDS_REASON_7            "Paused due to need for delayed recovery."
+    IDS_REASON_8            "Paused due to user activity."
+    IDS_REASON_9            "Paused by external request."
+    IDS_REASON_10           "Paused by upgrading."
 END
 
 #endif    // Neutral (Default) resources

@@ -1,7 +1,7 @@
 /*
 This file is part of Search Manager - shows Windows Search internals.
 
-Copyright (C) 2012-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #pragma once
 
 #include "Item.h"
+#include "DialogExSized.h"
 
 class CLock
 {
@@ -57,10 +58,11 @@ private:
 };
 
 
-class CSearchManagerDlg : public CDialog
+class CSearchManagerDlg : public CDialogExSized
 {
 public:
 	CSearchManagerDlg(CWnd* pParent = nullptr);
+	virtual ~CSearchManagerDlg() = default;
 
 	enum { IDD = IDD_SEARCHMANAGER_DIALOG };
 
@@ -68,35 +70,53 @@ public:
 	BOOL OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 
 protected:
-	HICON m_hIcon;
-	CStatic m_wndStatus;
-	CStatic m_wndName;
-	CStatic m_wndIndex;
-	CListCtrl m_wndList;
+	HICON			m_hIcon;
+	CStatic			m_wndStatus;
+	CStatic			m_wndName;
+	CStatic			m_wndIndex;
+	CListCtrl		m_wndList;
+	CMFCMenuButton	m_btnAdd;
+	CMenu			m_Menu;
 
-	CString m_sStatusCache;
-	CString m_sIndexCache;
-	bool m_bInUse;
-	bool m_bRefresh;
+	CString			m_sStatusCache;
+	CString			m_sIndexCache;
+	bool			m_bInUse;
+	bool			m_bRefresh;
 
-	CComPtr< ISearchManager > m_pManager;
-	CComPtr< ISearchCatalogManager > m_pCatalog;
-	CComPtr< ISearchCrawlScopeManager > m_pScope;
+	CComPtr< ISearchCatalogManager >	m_pCatalog;
+	CComPtr< ISearchCrawlScopeManager >	m_pScope;
+
+	// Update interface items
+	void UpdateInterface();
 
 	void Disconnect();
+
 	HRESULT EnumerateRoots(ISearchCrawlScopeManager* pScope);
 	HRESULT EnumerateScopeRules(ISearchCrawlScopeManager* pScope);
 
-	void SetStatus(UINT nStatus);
+	inline void SetStatus(UINT nStatus)
+	{
+		SetStatus( LoadString( nStatus ) );
+	}
 	void SetStatus(const CString& sStatus);
-	void SetIndex(UINT nIndex);
+
+	inline void SetIndex(UINT nIndex)
+	{
+		SetIndex( LoadString( nIndex ) );
+	}
 	void SetIndex(const CString& sIndex);
 
 	// Update interface
-	void OnUpdate();
+	void Update();
 
-	// Delete key pressed
-	void OnDelete();
+	// Add new item
+	void Add(BOOL bInclude, BOOL bDefault);
+
+	// Delete selected item(s)
+	void Delete();
+
+	// Edit selected item
+	void Edit(CRule* item);
 
 	BOOL OnInitDialog() override;
 	void DoDataExchange(CDataExchange* pDX) override;
@@ -108,6 +128,22 @@ protected:
 	afx_msg void OnDestroy();
 	afx_msg void OnNMClickSysindex(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnLvnDeleteitemList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnBnClickedAdd();
+	afx_msg void OnBnClickedDelete();
+	afx_msg void OnBnClickedReindex();
+	afx_msg void OnBnClickedReset();
+	afx_msg void OnBnClickedDefault();
+	afx_msg void OnLvnItemchangedList(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnBnClickedEdit();
+	afx_msg void OnNMRClickList(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnCopy();
+	afx_msg void OnDelete();
+	afx_msg void OnUpdateDelete(CCmdUI *pCmdUI);
+	afx_msg void OnEdit();
+	afx_msg void OnUpdateEdit(CCmdUI *pCmdUI);
+	afx_msg void OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 
 	DECLARE_MESSAGE_MAP()
 };

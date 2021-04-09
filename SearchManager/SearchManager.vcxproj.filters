@@ -21,6 +21,8 @@
     <None Include="res\SearchManager.ico">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\README.md" />
+    <None Include="..\LICENSE" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SearchManager.h">
@@ -41,6 +43,12 @@
     <ClInclude Include="Item.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UrlDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogExSized.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SearchManager.cpp">
@@ -53,6 +61,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Item.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UrlDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogExSized.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
