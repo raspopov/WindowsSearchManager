@@ -1,5 +1,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/8drxfdxvngn71fix?svg=true)](https://ci.appveyor.com/project/raspopov/windowssearchmanager)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/458991e27e0d473d92547d5f7c68c2d1)](https://www.codacy.com/gh/raspopov/WindowsSearchManager/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=raspopov/WindowsSearchManager&amp;utm_campaign=Badge_Grade)
+[![GitHub All Releases](https://img.shields.io/github/downloads/raspopov/WindowsSearchManager/total)](https://github.com/raspopov/WindowsSearchManager/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/raspopov/WindowsSearchManager)](https://github.com/raspopov/WindowsSearchManager/releases)
 
 # Windows Search™ Manager
 
