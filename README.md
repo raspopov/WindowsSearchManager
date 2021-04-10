@@ -50,4 +50,4 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 ## Thanks
 
-![PVS-Studio](https://pvs-studio.com/static/img/footer-unic.png)
+[![PVS-Studio](https://pvs-studio.com/static/img/footer-unic.png)](https://pvs-studio.com/)
