@@ -1,12 +1,11 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/8drxfdxvngn71fix?svg=true)](https://ci.appveyor.com/project/raspopov/windowssearchmanager)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/458991e27e0d473d92547d5f7c68c2d1)](https://www.codacy.com/gh/raspopov/WindowsSearchManager/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=raspopov/WindowsSearchManager&amp;utm_campaign=Badge_Grade)
 
- Windows Search™ Manager
--------------------------
+# Windows Search™ Manager
 
 Utility to manage a Windows Search™ internals.
 
- Licenses
-------------
+## Licenses
 
     Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
