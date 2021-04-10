@@ -68,18 +68,18 @@ void CDialogExSized::SaveWindowPlacement()
 	WINDOWPLACEMENT wp = { sizeof( WINDOWPLACEMENT ) };
 	if ( GetWindowPlacement( &wp ) )
 	{
-		AfxGetApp()->WriteProfileBinary( _T("Window"), CString( GetRuntimeClass()->m_lpszClassName ) + _T("_position"), (LPBYTE)&wp, sizeof( WINDOWPLACEMENT ) );
+		AfxGetApp()->WriteProfileBinary( _T("Window"), CString( GetRuntimeClass()->m_lpszClassName ) + _T("_position"), reinterpret_cast< LPBYTE >( &wp ), sizeof( WINDOWPLACEMENT ) );
 	}
 }
 
 void CDialogExSized::RestoreWindowPlacement()
 {
-	CAutoVectorPtr< WINDOWPLACEMENT >wp;
+	CAutoVectorPtr< WINDOWPLACEMENT > pwp;
 	UINT wp_size = 0;
-	if ( AfxGetApp()->GetProfileBinary( _T("Window"), CString( GetRuntimeClass()->m_lpszClassName ) + _T("_position"), (LPBYTE*)&wp, &wp_size ) &&
+	if ( AfxGetApp()->GetProfileBinary( _T("Window"), CString( GetRuntimeClass()->m_lpszClassName ) + _T("_position"), reinterpret_cast< LPBYTE* >( &pwp ), &wp_size ) &&
 			wp_size == sizeof( WINDOWPLACEMENT ) )
 	{
-		SetWindowPlacement( wp );
+		SetWindowPlacement( pwp );
 	}
 }
 

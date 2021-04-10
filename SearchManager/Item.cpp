@@ -48,10 +48,63 @@ CString CItem::GetTitle() const
 	{
 		return Path;
 	}
+	else if ( Name.IsEmpty() )
+	{
+		return User + _T(" ") + Path;
+	}
 	else
 	{
-		return _T("(") + User + _T(") ") + Path;
+		return Name + _T(" (") + User + _T(") ") + Path;
 	}
+}
+
+LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult)
+{
+	LSTATUS res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired | KEY_WOW64_64KEY, phkResult );
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired | KEY_WOW64_32KEY, phkResult );
+	}
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired, phkResult );
+	}
+	return res;
+}
+
+LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+	HKEY hValueKey;
+	LSTATUS res = RegOpenKeyFull( hKey, lpSubKey, KEY_QUERY_VALUE, &hValueKey );
+	if ( res == ERROR_SUCCESS )
+	{
+		res = RegQueryValueEx( hValueKey, lpValue, nullptr, lpType, lpData, lpcbData );
+		RegCloseKey( hValueKey );
+	}
+	return res;
+}
+
+// Protocol handler ProgID
+CString ProgIDFromProtocol(LPCTSTR szProtocol)
+{
+	TCHAR progid[ MAX_PATH ] = {};
+	DWORD type, progid_size = sizeof( progid );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_PROTOCOLS, szProtocol, &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		return progid;
+	}
+
+	CString prot_key;
+	prot_key.Format( _T("%s\\%s\\0"), KEY_PROTOCOLS, szProtocol );
+	progid_size = sizeof( progid );
+	res = RegQueryValueFull( HKEY_LOCAL_MACHINE, prot_key, _T("ProgID"), &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		return progid;
+	}
+
+	return CString();
 }
 
 void CItem::SetURL(LPCTSTR szURL)
@@ -74,24 +127,24 @@ void CItem::SetURL(LPCTSTR szURL)
 		else
 		{
 			// Protocol handler
-			TCHAR progid[ MAX_PATH ] = {};
-			DWORD type, progid_size = MAX_PATH;
-			if ( SHGetValue( HKEY_LOCAL_MACHINE, KEY_PROTOCOLS, Protocol, &type, progid, &progid_size ) == ERROR_SUCCESS )
+			const CString progid = ProgIDFromProtocol( Protocol );
+			if ( ! progid.IsEmpty() )
 			{
 				CLSID clsid = {};
-				if ( SUCCEEDED( CLSIDFromProgID( progid, &clsid ) ) )
+				if ( SUCCEEDED( CLSIDFromProgIDEx( progid, &clsid ) ) )
 				{
 					LPOLESTR str_clsid = nullptr;
 					if ( SUCCEEDED( StringFromCLSID( clsid, &str_clsid ) ) )
 					{
-						CString proc_key;
-						proc_key.Format( _T("CLSID\\%s\\InprocServer32"), str_clsid );
+						CString def_key;
+						def_key.Format( _T("CLSID\\%s"), str_clsid );
 
-						TCHAR proc[ MAX_PATH ] = {};
-						DWORD proc_size = MAX_PATH;
-						if ( SHGetValue( HKEY_CLASSES_ROOT, proc_key, _T(""), &type, proc, &proc_size ) == ERROR_SUCCESS )
+						TCHAR def[ MAX_PATH ] = {};
+						DWORD type, def_size = sizeof( def );
+						LSTATUS res = RegQueryValueFull( HKEY_CLASSES_ROOT, def_key, _T(""), &type, reinterpret_cast< LPBYTE >( def ), &def_size );
+						if ( res == ERROR_SUCCESS )
 						{
-							;
+							Name = def;
 						}
 						CoTaskMemFree( str_clsid );
 					}
@@ -154,7 +207,8 @@ CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot)
 		SetURL( szURL );
 		CoTaskMemFree( szURL );
 
-		hr = pScope->IncludedInCrawlScope( szURL, &IncludedInCrawlScope );
+		CLUSION_REASON reason;
+		hr = pScope->IncludedInCrawlScopeEx( URL, &IncludedInCrawlScope, &reason );
 		ASSERT( SUCCEEDED( hr ) );
 
 		hr = pRoot->get_IsHierarchical( &IsHierarchical );

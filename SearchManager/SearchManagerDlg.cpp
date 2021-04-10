@@ -62,15 +62,13 @@ struct error_t
 		};
 
 		LPTSTR lpszTemp = nullptr;
-		if ( ! FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-			nullptr, hr, 0, (LPTSTR)&lpszTemp, 0, nullptr ) )
+		if ( ! FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, hr, 0, reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr ) )
 		{
-			for (auto & szModule : szModules)
+			for ( auto & szModule : szModules )
 			{
 				if ( HMODULE hModule = LoadLibraryEx( szModule, nullptr, LOAD_LIBRARY_AS_DATAFILE ) )
 				{
-					const BOOL res = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE,
-						hModule, hr, 0, (LPTSTR)&lpszTemp, 0, nullptr);
+					const BOOL res = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr);
 
 					FreeLibrary( hModule );
 
@@ -313,7 +311,7 @@ void CSearchManagerDlg::Update()
 
 			Disconnect();
 
-			Sleep( 500 );
+			SleepEx( 500, FALSE );
 		}
 
 		// Create a new connection
@@ -358,7 +356,7 @@ void CSearchManagerDlg::Update()
 		}
 		else
 		{
-			Sleep( 500 );
+			SleepEx( 500, FALSE );
 
 			const error_t result( hr );
 			SetStatus( result.msg + CRLF CRLF + result.error + CRLF CRLF + LoadString( IDS_CLOSED ) );
@@ -367,7 +365,7 @@ void CSearchManagerDlg::Update()
 		}
 	}
 
-	CString sStatus, sIndex;
+	CString sStatus;
 
 	if ( m_pCatalog )
 	{
@@ -416,14 +414,14 @@ void CSearchManagerDlg::Update()
 				if ( status >= CATALOG_STATUS_IDLE && status <= CATALOG_STATUS_SHUTTING_DOWN )
 				{
 					sStatus += CRLF;
-					sStatus += LoadString( IDS_STATUS_1 + status );
+					sStatus += LoadString( IDS_STATUS_1 + static_cast< int >( status ) );
 				}
 				if ( status == CATALOG_STATUS_PAUSED )
 				{
 					if ( reason > CATALOG_PAUSED_REASON_NONE && reason <= CATALOG_PAUSED_REASON_UPGRADING )
 					{
 						sStatus += CRLF CRLF;
-						sStatus += LoadString( IDS_REASON_1 + reason - 1 );
+						sStatus += LoadString( IDS_REASON_1 + static_cast< int >( reason ) - 1 );
 					}
 				}
 			}
@@ -489,9 +487,11 @@ void CSearchManagerDlg::OnNMClickSysindex(NMHDR * /*pNMHDR*/, LRESULT *pResult)
 	sSys.ReleaseBuffer();
 	sSys += _T("\\system32\\");
 
-	ShellExecute( GetSafeHwnd(), nullptr, sSys + _T("control.exe"), _T(" /name Microsoft.IndexingOptions"), sSys, SW_SHOWDEFAULT );
+	const CString sControl = sSys + _T("control.exe");
+	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, sControl, _T(" /name Microsoft.IndexingOptions"), sSys, SW_SHOWDEFAULT };
+	VERIFY( ShellExecuteEx( &sei ) );
 
-	Sleep( 1000 );
+	SleepEx( 500, FALSE );
 
 	*pResult = 0;
 }
@@ -935,10 +935,11 @@ void CSearchManagerDlg::OnCopy()
 	{
 		if ( EmptyClipboard() )
 		{
-			const size_t nLen = (size_t)( values.GetLength() + 1 ) * sizeof( TCHAR );
+			const size_t nLen = ( values.GetLength() + 1 ) * sizeof( TCHAR );
 			if ( HGLOBAL hGlob = GlobalAlloc( GMEM_FIXED, nLen ) )
 			{
-				CopyMemory( hGlob, (LPCTSTR)values, nLen );
+				memcpy_s( hGlob, nLen, static_cast< LPCTSTR >( values ), nLen );
+
 				if ( SetClipboardData( CF_UNICODETEXT, hGlob ) == nullptr )
 				{
 					GlobalFree( hGlob );

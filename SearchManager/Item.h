@@ -47,6 +47,7 @@ public:
 	group_t	Group;				// Group type: root or rule
 	CString URL;				// The pattern or URL for the rule, or the URL of the starting point for search root
 	CString Protocol;
+	CString Name;
 	CString User;
 	CString Path;
 };

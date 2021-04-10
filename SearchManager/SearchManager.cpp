@@ -52,7 +52,7 @@ BOOL CSearchManagerApp::InitInstance()
 
 	CWinAppEx::InitInstance();
 
-	CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE );
+	VERIFY( SUCCEEDED( CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE ) ) );
 
 	SetRegistryKey( AFX_IDS_COMPANY_NAME );
 
@@ -81,7 +81,7 @@ BOOL CSearchManagerApp::ProcessMessageFilter(int code, LPMSG lpMsg)
 		if ( lpMsg->message == WM_KEYDOWN )
 		{
 			// Emulate key down message for dialog
-			if ( pMainWnd->OnKeyDown( (UINT)lpMsg->wParam, ( lpMsg->lParam & 0xffff ), ( ( lpMsg->lParam >> 16 ) & 0xffff ) ) )
+			if ( pMainWnd->OnKeyDown( static_cast< UINT >( lpMsg->wParam ), ( lpMsg->lParam & 0xffff ), ( ( lpMsg->lParam >> 16 ) & 0xffff ) ) )
 			{
 				return TRUE;
 			}
