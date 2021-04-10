@@ -1,17 +1,17 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/8drxfdxvngn71fix?svg=true)](https://ci.appveyor.com/project/raspopov/windowssearchmanager)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/458991e27e0d473d92547d5f7c68c2d1)](https://www.codacy.com/gh/raspopov/WindowsSearchManager/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=raspopov/WindowsSearchManager&amp;utm_campaign=Badge_Grade)
 
-# Windows Search™ Manager
+# Windows Searchâ„¢ Manager
 
-Utility to manage a Windows Search™ internals.
+Utility to manage a Windows Searchâ„¢ internals.
 
-![Windows Search™ Manager](https://raw.githubusercontent.com/raspopov/WindowsSearchManager/main/SearchManager-main.png)
+![Windows Searchâ„¢ Manager](https://raw.githubusercontent.com/raspopov/WindowsSearchManager/main/SearchManager-main.png)
 
 ## Features
 
  - Fine tuning of indexer locations (add, edit, delete).
  - Bulk operations.
- - Direct control of Windows Search™ engine.
+ - Direct control of Windows Searchâ„¢ engine.
  - Nifty context menu.
 
 ## System Requirements
