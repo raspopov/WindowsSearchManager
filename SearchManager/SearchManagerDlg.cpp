@@ -487,8 +487,8 @@ void CSearchManagerDlg::OnNMClickSysindex(NMHDR * /*pNMHDR*/, LRESULT *pResult)
 	sSys.ReleaseBuffer();
 	sSys += _T("\\system32\\");
 
-	const CString sControl = sSys + _T("control.exe");
-	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, sControl, _T(" /name Microsoft.IndexingOptions"), sSys, SW_SHOWDEFAULT };
+	const CString sControl = sSys + _T("rundll32.exe");
+	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, sControl, _T("shell32.dll,Control_RunDLL srchadmin.dll"), sSys, SW_SHOWDEFAULT };
 	VERIFY( ShellExecuteEx( &sei ) );
 
 	SleepEx( 500, FALSE );
