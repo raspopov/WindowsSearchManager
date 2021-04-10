@@ -9,25 +9,25 @@ Utility to manage a Windows Search™ internals.
 
 ## Features
 
- - Fine tuning of indexer locations (add, edit, delete).
- - Bulk operations.
- - Direct control of Windows Search™ engine.
- - Nifty context menu.
+- Fine tuning of indexer locations (add, edit, delete).
+- Bulk operations.
+- Direct control of Windows Search™ engine.
+- Nifty context menu.
 
 ## System Requirements
 
- - Windows XP or later, 32 or 64-bit.
- - Microsoft Visual C++ 2015-2019 Redistributables ([32-bit](https://aka.ms/vs/15/release/VC_redist.x86.exe)/[64-bit](https://aka.ms/vs/15/release/VC_redist.x64.exe)).
- - Administrator rights (optional).
+- Windows XP or later, 32 or 64-bit.
+- Microsoft Visual C++ 2015-2019 Redistributables ([32-bit](https://aka.ms/vs/15/release/VC_redist.x86.exe)/[64-bit](https://aka.ms/vs/15/release/VC_redist.x64.exe)).
+- Administrator rights (optional).
 
 ## Development Requirements
 
- - [Microsoft Visual Studio 2017 Community](https://aka.ms/vs/15/release/vs_Community.exe) with components:
- - Microsoft.VisualStudio.Workload.NativeDesktop
- - Microsoft.VisualStudio.Component.VC.ATLMFC
- - Microsoft.VisualStudio.Component.WinXP
- - Microsoft.VisualStudio.ComponentGroup.NativeDesktop.WinXP
- - Microsoft.VisualStudio.Component.NuGet
+- [Microsoft Visual Studio 2017 Community](https://aka.ms/vs/15/release/vs_Community.exe) with components:
+- Microsoft.VisualStudio.Workload.NativeDesktop
+- Microsoft.VisualStudio.Component.VC.ATLMFC
+- Microsoft.VisualStudio.Component.WinXP
+- Microsoft.VisualStudio.ComponentGroup.NativeDesktop.WinXP
+- Microsoft.VisualStudio.Component.NuGet
 
 ## Licenses
 
