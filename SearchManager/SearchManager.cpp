@@ -90,3 +90,51 @@ BOOL CSearchManagerApp::ProcessMessageFilter(int code, LPMSG lpMsg)
 
 	return CWinAppEx::ProcessMessageFilter( code, lpMsg );
 }
+
+LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult)
+{
+	LSTATUS res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired | KEY_WOW64_64KEY, phkResult );
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired | KEY_WOW64_32KEY, phkResult );
+	}
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired, phkResult );
+	}
+	return res;
+}
+
+LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+	HKEY hValueKey;
+	LSTATUS res = RegOpenKeyFull( hKey, lpSubKey, KEY_QUERY_VALUE, &hValueKey );
+	if ( res == ERROR_SUCCESS )
+	{
+		res = RegQueryValueEx( hValueKey, lpValue, nullptr, lpType, lpData, lpcbData );
+		RegCloseKey( hValueKey );
+	}
+	return res;
+}
+
+CString ProgIDFromProtocol(LPCTSTR szProtocol)
+{
+	TCHAR progid[ MAX_PATH ] = {};
+	DWORD type, progid_size = sizeof( progid );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_PROTOCOLS, szProtocol, &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		return progid;
+	}
+
+	CString prot_key;
+	prot_key.Format( _T("%s\\%s\\0"), KEY_PROTOCOLS, szProtocol );
+	progid_size = sizeof( progid );
+	res = RegQueryValueFull( HKEY_LOCAL_MACHINE, prot_key, _T("ProgID"), &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		return progid;
+	}
+
+	return CString();
+}

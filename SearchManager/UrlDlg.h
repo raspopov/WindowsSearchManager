@@ -43,13 +43,14 @@ class CUrlDialog : public CDialogEx
 	DECLARE_DYNAMIC(CUrlDialog)
 
 public:
-	CUrlDialog(const CString& sTitle, CWnd* pParent = nullptr);   // standard constructor
+	CUrlDialog(CWnd* pParent = nullptr);   // standard constructor
 	virtual ~CUrlDialog() = default;
 
 	enum { IDD = IDD_URL_DIALOG };
 
 	CString	m_sTitle;
 	CString m_sURL;
+	CString m_sInfo;
 
 	// Check if URL has no data
 	bool IsEmpty() const noexcept;

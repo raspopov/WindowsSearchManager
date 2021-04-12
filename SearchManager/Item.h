@@ -24,25 +24,28 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #define DEFAULT_PROTOCOL	_T("defaultroot")
 #define FILE_PROTOCOL		_T("file")
 
-enum group_t { GROUP_ROOTS, GROUP_RULES };
+enum group_t { GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_DEFAULT_RULES };
+
+inline bool IsDeletable(group_t group)
+{
+	return ( group == GROUP_ROOTS || group == GROUP_OFFLINE_ROOTS || group == GROUP_RULES || group == GROUP_DEFAULT_RULES );
+}
 
 class CItem
 {
 public:
-	CItem(group_t group);
+	CItem(group_t group) noexcept;
+	CItem(LPCTSTR url, group_t group);
 	virtual ~CItem() = default;
-	virtual void InsertTo(CListCtrl& list) = 0;
+
+	virtual void ParseURL();
+	virtual int InsertTo(CListCtrl& list, int group_id);
 	virtual HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) = 0;
 	virtual HRESULT AddTo(ISearchCrawlScopeManager* pScope) = 0;
 
-	inline operator bool() const noexcept
-	{
-		return ! URL.IsEmpty();
-	}
+	operator bool() const noexcept;
 
-	CString GetTitle() const;
-
-	void SetURL(LPCTSTR szURL);
+	virtual CString GetTitle() const;
 
 	group_t	Group;				// Group type: root or rule
 	CString URL;				// The pattern or URL for the rule, or the URL of the starting point for search root
@@ -50,14 +53,16 @@ public:
 	CString Name;
 	CString User;
 	CString Path;
+	CString Guid;
 };
 
 class CRoot : public CItem
 {
 public:
+	CRoot(BOOL notif, LPCTSTR url, group_t group = GROUP_ROOTS);
 	CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot);
 
-	void InsertTo(CListCtrl& list) override;
+	int InsertTo(CListCtrl& list, int group_id) override;
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) override;
 	HRESULT AddTo(ISearchCrawlScopeManager* pScope) override;
 
@@ -67,16 +72,29 @@ public:
 	BOOL UseNotificationsOnly;	// Indicates whether this search root should be indexed only by notification and not crawled
 };
 
+class COfflineRoot : public CRoot
+{
+public:
+	COfflineRoot(BOOL notif, LPCTSTR url, group_t group = GROUP_OFFLINE_ROOTS);
+};
+
 class CRule : public CItem
 {
 public:
+	CRule(BOOL incl, BOOL def, LPCTSTR url, group_t group = GROUP_RULES);
 	CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule);
 
-	void InsertTo(CListCtrl& list) override;
+	int InsertTo(CListCtrl& list, int group_id) override;
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) override;
 	HRESULT AddTo(ISearchCrawlScopeManager* pScope) override;
 
 	BOOL IsInclude;				// A value identifying whether this rule is an inclusion rule
 	BOOL IsDefault;				// Identifies whether this is a default rule
 	BOOL HasChild;				// Identifies whether a given URL has a child rule in scope
+};
+
+class CDefaultRule : public CRule
+{
+public:
+	CDefaultRule(BOOL incl, BOOL def, LPCTSTR url, group_t group = GROUP_DEFAULT_RULES);
 };

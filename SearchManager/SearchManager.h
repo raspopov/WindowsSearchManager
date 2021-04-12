@@ -43,3 +43,15 @@ inline CString LoadString(UINT nID)
 	VERIFY( str.LoadString( nID ) );
 	return str;
 }
+
+#define KEY_PROTOCOLS		_T("SOFTWARE\\Microsoft\\Windows Search\\ProtocolHandlers")
+#define KEY_ROOTS			_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
+#define KEY_DEFAULT_RULES	_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\DefaultRules")
+#define KEY_WORKING_RULES	_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\WorkingSetRules")
+
+LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult);
+
+LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
+
+// Protocol handler ProgID
+CString ProgIDFromProtocol(LPCTSTR szProtocol);

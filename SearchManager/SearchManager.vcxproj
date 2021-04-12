@@ -197,6 +197,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DialogExSized.h" />
+    <ClInclude Include="Error.h" />
     <ClInclude Include="Item.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SearchManager.h" />
@@ -210,6 +211,7 @@
     <ClCompile Include="Item.cpp" />
     <ClCompile Include="SearchManager.cpp" />
     <ClCompile Include="SearchManagerDlg.cpp" />
+    <ClCompile Include="SearchManagerDlgOps.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

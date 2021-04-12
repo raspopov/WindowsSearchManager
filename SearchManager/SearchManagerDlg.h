@@ -21,6 +21,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "Error.h"
 #include "Item.h"
 #include "DialogExSized.h"
 
@@ -89,13 +90,22 @@ protected:
 	CComPtr< ISearchCatalogManager >	m_pCatalog;
 	CComPtr< ISearchCrawlScopeManager >	m_pScope;
 
+	CList< CItem* >	m_List;
+	CMapStringToPtr m_Groups;
+
+	int GetGroupId(UINT nID, const CString& sPostfix);
+
 	// Update interface items
 	void UpdateInterface();
+
+	void ReSize();
 
 	void Disconnect();
 
 	HRESULT EnumerateRoots(ISearchCrawlScopeManager* pScope);
 	HRESULT EnumerateScopeRules(ISearchCrawlScopeManager* pScope);
+	void EnumerateRegistryRoots();
+	void EnumerateRegistryDefaultRules();
 
 	inline void SetStatus(UINT nStatus)
 	{
@@ -112,14 +122,16 @@ protected:
 	// Update interface
 	void Update();
 
-	// Add new item
-	void Add(BOOL bInclude, BOOL bDefault);
+	// Add new or edit existing search root
+	void AddRoot(LPCTSTR szURL = nullptr);
+
+	// Add new or edit existing search scope rule
+	void AddRule(BOOL bInclude, BOOL bDefault, LPCTSTR szURL = nullptr);
 
 	// Delete selected item(s)
 	void Delete();
 
-	// Edit selected item
-	void Edit(CRule* item);
+	void OnEdit(const CItem* item);
 
 	BOOL OnInitDialog() override;
 	void DoDataExchange(CDataExchange* pDX) override;

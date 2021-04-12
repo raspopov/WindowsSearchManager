@@ -48,9 +48,8 @@ END_MESSAGE_MAP()
 
 IMPLEMENT_DYNAMIC(CUrlDialog, CDialogEx)
 
-CUrlDialog::CUrlDialog(const CString& sTitle, CWnd* pParent /*=nullptr*/)
+CUrlDialog::CUrlDialog(CWnd* pParent /*=nullptr*/)
 	: CDialogEx	( CUrlDialog::IDD, pParent)
-	, m_sTitle	( sTitle )
 {
 }
 
@@ -65,6 +64,7 @@ void CUrlDialog::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Text(pDX, IDC_BROWSER, m_sURL);
 	DDX_Control(pDX, IDC_BROWSER, m_wndUrl);
+	DDX_Text(pDX, IDC_INFO, m_sInfo);
 }
 
 BEGIN_MESSAGE_MAP(CUrlDialog, CDialogEx)
