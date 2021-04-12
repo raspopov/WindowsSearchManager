@@ -94,13 +94,13 @@ int CSearchManagerDlg::GetGroupId(UINT nID, const CString& sPostfix)
 	void* value;
 	if ( m_Groups.Lookup( name, value ) )
 	{
-		return (int)value;
+		return reinterpret_cast< int >( value );
 	}
 
 	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
 		const_cast< LPTSTR >( static_cast< LPCTSTR >( name ) ), 0, nullptr, 0, m_wndList.GetGroupCount() };
 	m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots );
-	m_Groups.SetAt( name, (void*)grpRoots.iGroupId );
+	m_Groups.SetAt( name, reinterpret_cast< void* >( grpRoots.iGroupId ) );
 	return grpRoots.iGroupId;
 }
 
@@ -218,13 +218,10 @@ void CSearchManagerDlg::UpdateInterface()
 		if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
 		{
 			const int index = m_wndList.GetNextSelectedItem( pos );
-			if ( ! pos )
+			if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 			{
-				if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
-				{
-					bSelected = IsDeletable( item->Group );
-					bSingle = bSelected && ! pos;
-				}
+				bSelected = IsDeletable( item->Group );
+				bSingle = bSelected && ! pos;
 			}
 		}
 	}
@@ -561,6 +558,7 @@ void CSearchManagerDlg::EnumerateRegistryRoots()
 					DWORD notif = FALSE;
 					DWORD notif_size = sizeof( DWORD );
 					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("ProvidesNotifications"), &type, reinterpret_cast< LPBYTE >( &notif ), &notif_size );
+					ASSERT( res == ERROR_SUCCESS );
 
 					CAutoPtr< COfflineRoot > root( new COfflineRoot( notif, url ) );
 					root->ParseURL();
@@ -615,10 +613,12 @@ void CSearchManagerDlg::EnumerateRegistryDefaultRules()
 					DWORD incl = FALSE;
 					DWORD incl_size = sizeof( DWORD );
 					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Include"), &type, reinterpret_cast< LPBYTE >( &incl ), &incl_size );
+					ASSERT( res == ERROR_SUCCESS );
 
 					DWORD def = FALSE;
 					DWORD def_size = sizeof( DWORD );
 					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Default"), &type, reinterpret_cast< LPBYTE >( &def ), &def_size );
+					ASSERT( res == ERROR_SUCCESS );
 
 					CAutoPtr< CDefaultRule > rule( new CDefaultRule( incl, def, url ) );
 					rule->ParseURL();
