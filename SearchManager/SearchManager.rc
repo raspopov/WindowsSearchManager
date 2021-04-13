@@ -44,11 +44,9 @@ EXSTYLE WS_EX_APPWINDOW
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Refresh",IDOK,386,8,60,16
-    PUSHBUTTON      "Reindex...",IDC_REINDEX,386,27,60,16
-    PUSHBUTTON      "Reset...",IDC_RESET,386,46,60,16
-    PUSHBUTTON      "Default...",IDC_DEFAULT,386,65,60,16
-    CONTROL         "Add...",IDC_ADD,"MfcMenuButton",WS_TABSTOP,386,84,60,16
-    PUSHBUTTON      "Edit...",IDC_EDIT,386,103,60,16
+    CONTROL         "Index...",IDC_REINDEX,"MfcMenuButton",WS_TABSTOP,386,28,60,16
+    CONTROL         "Add...",IDC_ADD,"MfcMenuButton",WS_TABSTOP,386,82,60,16
+    PUSHBUTTON      "Edit...",IDC_EDIT,386,102,60,16
     PUSHBUTTON      "Delete...",IDC_DELETE,386,122,60,16
     GROUPBOX        "Windows Search™ status",IDC_NAME,7,7,371,129
     LTEXT           "",IDC_STATUS,16,21,353,107,SS_NOPREFIX
@@ -154,8 +152,6 @@ BEGIN
     100, 0, 0, 0,
     100, 0, 0, 0,
     100, 0, 0, 0,
-    100, 0, 0, 0,
-    100, 0, 0, 0,
     0, 0, 100, 0,
     0, 0, 100, 0,
     0, 0, 100, 100,
@@ -177,6 +173,23 @@ END
 
 IDD_SEARCHMANAGER_DIALOG DLGINIT
 BEGIN
+    IDC_REINDEX, 0x37c, 283, 0
+0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x4f5f, 0x4d53, 
+0x6e65, 0x3e75, 0x4146, 0x534c, 0x3c45, 0x4d2f, 0x4346, 0x654d, 0x756e, 
+0x7542, 0x7474, 0x6e6f, 0x4f5f, 0x4d53, 0x6e65, 0x3e75, 0x4d3c, 0x4346, 
+0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x525f, 0x6769, 0x7468, 0x7241, 
+0x6f72, 0x3e77, 0x4146, 0x534c, 0x3c45, 0x4d2f, 0x4346, 0x654d, 0x756e, 
+0x7542, 0x7474, 0x6e6f, 0x525f, 0x6769, 0x7468, 0x7241, 0x6f72, 0x3e77, 
+0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x535f, 0x6174, 
+0x5079, 0x6572, 0x7373, 0x6465, 0x463e, 0x4c41, 0x4553, 0x2f3c, 0x464d, 
+0x4d43, 0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 0x7453, 0x7961, 0x7250, 
+0x7365, 0x6573, 0x3e64, 0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 
+0x6e6f, 0x445f, 0x6665, 0x7561, 0x746c, 0x6c43, 0x6369, 0x3e6b, 0x5254, 
+0x4555, 0x2f3c, 0x464d, 0x4d43, 0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 
+0x6544, 0x6166, 0x6c75, 0x4374, 0x696c, 0x6b63, 0x3c3e, 0x464d, 0x4d43, 
+0x6e65, 0x4275, 0x7475, 0x6f74, 0x5f6e, 0x7541, 0x6f74, 0x6973, 0x657a, 
+0x463e, 0x4c41, 0x4553, 0x2f3c, 0x464d, 0x4d43, 0x6e65, 0x4275, 0x7475, 
+0x6f74, 0x5f6e, 0x7541, 0x6f74, 0x6973, 0x657a, "\076" 
     IDC_ADD, 0x37c, 283, 0
 0x4d3c, 0x4346, 0x654d, 0x756e, 0x7542, 0x7474, 0x6e6f, 0x4f5f, 0x4d53, 
 0x6e65, 0x3e75, 0x4146, 0x534c, 0x3c45, 0x4d2f, 0x4346, 0x654d, 0x756e, 
@@ -234,6 +247,20 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Edit...",                     ID_EDIT
         MENUITEM "Delete...",                   ID_DELETE
+        MENUITEM SEPARATOR
+        MENUITEM "Reindex",                     ID_REINDEX
+    END
+END
+
+IDR_REINDEX_MENU MENU
+BEGIN
+    POPUP "0"
+    BEGIN
+        MENUITEM "Reindex...",                  ID_REINDEX_ALL
+        MENUITEM "Reset...",                    ID_RESET
+        MENUITEM "Default...",                  ID_DEFAULT
+        MENUITEM SEPARATOR
+        MENUITEM "Explore",                     ID_EXPLORE
     END
 END
 
@@ -297,8 +324,8 @@ BEGIN
     IDS_REASON_10           "Paused by upgrading."
     IDS_ADD_SCOPE_INFO      "A scope rule can be a fully qualified URL or a rule with a pattern.\nThe typical URL structure is: {protocol} :// {user SID or storage} / {path} /\nDefault scope rules provide an initial set of scope rules. User scope rules always take precedence over default scope rules, unless user-defined rules are reverted in which case the default scope rules are reinstated."
     IDS_ADD_ROOT_INFO       "A search root must be a fully qualified URL.\nThe typical URL structure is: {protocol} :// {user SID or storage} / {path} /\nBy default, the indexer does not crawl a scope when you add a search root. You must also add an include scope rule for the root."
-    IDS_DEFAULT_ROOTS       "Search roots (registry)"
-    IDS_DEFAULT_RULES       "Search scope rules (registry)"
+    IDS_DEFAULT_ROOTS       "Search roots (offline)"
+    IDS_DEFAULT_RULES       "Search scope rules (offline)"
 END
 
 #endif    // Neutral (Default) resources

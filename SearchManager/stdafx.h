@@ -46,6 +46,10 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <searchapi.h>
 #include <shlobj.h>
 #include <sddl.h>
+#include <aclapi.h>
+#include <tlhelp32.h>
+
+#include <atlsecurity.h>
 
 #include <afxcontextmenumanager.h>
 #include <afxwinappex.h>

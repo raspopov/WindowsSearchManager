@@ -26,34 +26,36 @@ struct error_t
 	CString error;
 	CString msg;
 
-	error_t(HRESULT hr)
+	inline operator CString() const
+	{
+		return msg + _T(' ') + error;
+	}
+
+	error_t(HRESULT hr = GetLastError())
 	{
 		static LPCTSTR szModules [] =
 		{
 			_T("tquery.dll"),
 			_T("lsasrv.dll"),
 			_T("user32.dll"),
-			_T("netapi32.dll"),
 			_T("netmsg.dll"),
 			_T("netevent.dll"),
-			_T("xpsp2res.dll"),
-			_T("spmsg.dll"),
 			_T("wininet.dll"),
 			_T("ntdll.dll"),
-			_T("ntdsbmsg.dll"),
 			_T("mprmsg.dll"),
-			_T("IoLogMsg.dll"),
-			_T("NTMSEVT.DLL")
+			_T("IoLogMsg.dll")
 		};
 
 		LPTSTR lpszTemp = nullptr;
-		if ( ! FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, hr, 0, reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr ) )
+		if ( ! FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, hr, 0,
+			reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr ) )
 		{
 			for ( auto & szModule : szModules )
 			{
 				if ( HMODULE hModule = LoadLibraryEx( szModule, nullptr, LOAD_LIBRARY_AS_DATAFILE ) )
 				{
-					const BOOL res = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr);
+					const BOOL res = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0,
+						reinterpret_cast< LPTSTR >( &lpszTemp ), 0, nullptr );
 
 					FreeLibrary( hModule );
 
@@ -61,6 +63,14 @@ struct error_t
 					{
 						break;
 					}
+					else if ( GetLastError() == ERROR_RESOURCE_TYPE_NOT_FOUND )
+					{
+						TRACE( _T("Library has no message table: %s\n"), szModule );
+					}
+				}
+				else
+				{
+					TRACE( _T("Library not found: %s\n"), szModule );
 				}
 			}
 		}

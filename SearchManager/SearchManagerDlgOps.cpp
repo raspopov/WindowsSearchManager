@@ -31,7 +31,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #define new DEBUG_NEW
 #endif
 
-void CSearchManagerDlg::AddRoot(LPCTSTR szURL)
+void CSearchManagerDlg::AddRoot(const CString& sURL)
 {
 	CLock locker( &m_bInUse );
 	if ( ! locker.Lock() || ! m_pScope )
@@ -41,20 +41,20 @@ void CSearchManagerDlg::AddRoot(LPCTSTR szURL)
 
 	CUrlDialog dlg( this );
 	dlg.m_sTitle = LoadString( IDS_ADD_ROOT );
-	if ( szURL )
+	if ( ! sURL.IsEmpty() )
 	{
-		dlg.m_sURL = szURL;
+		dlg.m_sURL = sURL;
 	}
 	dlg.m_sInfo = LoadString( IDS_ADD_ROOT_INFO );
-	if ( dlg.DoModal() == IDOK && ! dlg.IsEmpty() && ( ! szURL || dlg.m_sURL.CompareNoCase( szURL ) != 0 ) )
+	if ( dlg.DoModal() == IDOK && ! dlg.IsEmpty() && ( sURL.IsEmpty() || dlg.m_sURL.CompareNoCase( sURL ) != 0 ) )
 	{
 		CWaitCursor wc;
 
 		// Delete old root if specified
 		HRESULT hr = S_OK;
-		if ( szURL )
+		if ( ! sURL.IsEmpty() )
 		{
-			CRoot root( TRUE, szURL );
+			CRoot root( TRUE, sURL );
 			hr = root.DeleteFrom( m_pScope );
 		}
 
@@ -80,7 +80,7 @@ void CSearchManagerDlg::AddRoot(LPCTSTR szURL)
 	}
 }
 
-void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, LPCTSTR szURL)
+void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sURL)
 {
 	CLock locker( &m_bInUse );
 	if ( ! locker.Lock() || ! m_pScope )
@@ -92,20 +92,20 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, LPCTSTR szURL)
 	dlg.m_sTitle.Format( LoadString( IDS_ADD_SCOPE ),
 		( bInclude ? _T("Include") : _T("Exclude") ),
 		( bDefault ? _T("Default") : _T("User") ) );
-	if ( szURL )
+	if ( ! sURL.IsEmpty() )
 	{
-		dlg.m_sURL = szURL;
+		dlg.m_sURL = sURL;
 	}
 	dlg.m_sInfo = LoadString( IDS_ADD_SCOPE_INFO );
-	if ( dlg.DoModal() == IDOK && ! dlg.IsEmpty() && ( ! szURL || dlg.m_sURL.CompareNoCase( szURL ) != 0 ) )
+	if ( dlg.DoModal() == IDOK && ! dlg.IsEmpty() && ( sURL.IsEmpty() || dlg.m_sURL.CompareNoCase( sURL ) != 0 ) )
 	{
 		CWaitCursor wc;
 
 		// Delete old scope rule if specified
 		HRESULT hr = S_OK;
-		if ( szURL )
+		if ( ! sURL.IsEmpty() )
 		{
-			CRule rule( bInclude, bDefault, szURL );
+			CRule rule( bInclude, bDefault, sURL );
 			hr = rule.DeleteFrom( m_pScope );
 		}
 
@@ -140,16 +140,13 @@ void CSearchManagerDlg::Delete()
 	}
 
 	// Enumerate items to delete
-	CList< CItem* > to_delete;
+	CList< const CItem* > to_delete;
 	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 	{
 		const int index = m_wndList.GetNextSelectedItem( pos );
-		if ( auto item = reinterpret_cast< CItem* >( m_wndList.GetItemData( index ) ) )
+		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 		{
-			if ( IsDeletable( item->Group ) )
-			{
-				to_delete.AddTail( item );
-			}
+			to_delete.AddTail( item );
 		}
 	}
 
@@ -165,7 +162,7 @@ void CSearchManagerDlg::Delete()
 			for ( POSITION pos = to_delete.GetHeadPosition(); pos; )
 			{
 				const POSITION prev = pos;
-				CItem* item = to_delete.GetNext( pos );
+				auto item = to_delete.GetNext( pos );
 
 				CWaitCursor wc;
 
@@ -208,5 +205,130 @@ void CSearchManagerDlg::Delete()
 				}
 			}
 		}
+	}
+}
+
+void CSearchManagerDlg::Reindex()
+{
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() || ! m_pCatalog )
+	{
+		return;
+	}
+
+	// Enumerate items to delete
+	CList< const CItem* > to_delete;
+	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
+	{
+		const POSITION prev = pos;
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
+		{
+			HRESULT hr = item->Reindex( m_pCatalog );
+			if ( hr != S_OK )
+			{
+				const error_t result( hr );
+				const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
+					MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
+				if ( res == IDRETRY )
+				{
+					// Retry deletion
+					pos = prev;
+					continue;
+				}
+				else if ( res == IDIGNORE )
+				{
+					// Ignore error and continue deletion
+					continue;
+				}
+				else
+				{
+					// Cancel deletion
+					break;
+				}
+			}
+		}
+	}
+}
+
+void CSearchManagerDlg::ReindexAll()
+{
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() || ! m_pCatalog )
+	{
+		return;
+	}
+
+	if ( AfxMessageBox( IDS_REINDEX_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+	{
+		const HRESULT hr = m_pCatalog->Reindex();
+
+		const error_t result( hr );
+		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
+
+		m_bRefresh = true;
+	}
+}
+
+void CSearchManagerDlg::Reset()
+{
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() || ! m_pCatalog )
+	{
+		return;
+	}
+
+	if ( AfxMessageBox( IDS_RESET_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+	{
+		const HRESULT hr = m_pCatalog->Reset();
+
+		const error_t result( hr );
+		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
+
+		m_bRefresh = true;
+	}
+}
+
+void CSearchManagerDlg::Default()
+{
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() || ! m_pScope )
+	{
+		return;
+	}
+
+	if ( AfxMessageBox( IDS_DEFAULT_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+	{
+		HRESULT hr = m_pScope->RevertToDefaultScopes();
+		if ( SUCCEEDED( hr ) )
+		{
+			const HRESULT hr_save = m_pScope->SaveAll();
+			if ( hr == S_OK || FAILED( hr_save ) )
+			{
+				hr = hr_save;
+			}
+		}
+
+		const error_t result( hr );
+		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
+
+		m_bRefresh = true;
+	}
+}
+
+void CSearchManagerDlg::Explore()
+{
+	CWaitCursor wc;
+
+	TCHAR folder[ MAX_PATH ] = {};
+	DWORD type, folder_size = sizeof( folder );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		const CString params = CString( _T("/k cd /d \"") ) + folder + _T("Applications\\Windows\\\" && dir");
+		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, _T("cmd.exe"), params, nullptr, SW_SHOWDEFAULT };
+		VERIFY( ShellExecuteEx( &sei ) );
+
+		SleepEx( 500, FALSE );
 	}
 }

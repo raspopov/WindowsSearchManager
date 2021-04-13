@@ -34,12 +34,14 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 CItem::CItem(group_t group) noexcept
 	: Group	( group )
+	, Guid	()
 {
 }
 
-CItem::CItem(LPCTSTR url, group_t group)
+CItem::CItem(const CString& url, group_t group) noexcept
 	: Group	( group )
 	, URL	( url )
+	, Guid	()
 {
 }
 
@@ -55,7 +57,7 @@ CString CItem::GetTitle() const
 	}
 	else if ( Name.IsEmpty() )
 	{
-		return User + _T(" ") + Path;
+		return _T("(") + User + _T(") ") + Path;
 	}
 	else
 	{
@@ -63,7 +65,7 @@ CString CItem::GetTitle() const
 	}
 }
 
-void CItem::ParseURL()
+void CItem::ParseURL(bool bGuid)
 {
 	int begin = URL.Find( _T("://") );
 	if ( begin != -1 )
@@ -110,11 +112,54 @@ void CItem::ParseURL()
 		else if ( Protocol.CompareNoCase( FILE_PROTOCOL ) == 0 )
 		{
 			// File
-			if ( Path.GetLength() >= 42 && Path.GetAt( 3 ) == _T('[') && Path.GetAt( 40 ) == _T(']') )
+			const TCHAR disk_letter = Path.GetAt( 0 );
+			if ( _istalpha( disk_letter ) && Path.GetAt( 1 ) == _T(':') && Path.GetAt( 2 ) == _T('\\') )
 			{
-				Guid = Path.Mid( 4, 36 );
-				Path = Path.Left( 3 ) + Path.Mid( 42 );
-				URL = Protocol + _T(":///") + Path;
+				// Check for inner [GUID]
+				if ( Path.GetLength() >= 42 && Path.GetAt( 3 ) == _T('[') && Path.GetAt( 40 ) == _T(']') )
+				{
+					const CString guid = _T("{") + Path.Mid( 4, 36 ) + _T("}");
+
+					// Cut-off the GUID from the Path and URL
+					Path = Path.Left( 3 ) + (LPCTSTR)Path.Mid( 42 );
+					URL = Protocol + _T(":///") + Path;
+
+					if ( SUCCEEDED( CLSIDFromString( guid, &Guid ) ) && bGuid )
+					{
+						// Read disk GUID if any
+						const DWORD drives = GetLogicalDrives();
+						if ( ( drives & ( 1 << ( disk_letter - 'A' ) ) ) != 0 )
+						{
+							CFile file;
+							const CString filename = Path.Left( 3 ) + INDEXER_VOLUME;
+							if ( file.Open( filename, CFile::modeRead | CFile::shareDenyNone | CFile::modeNoTruncate ) )
+							{
+								TCHAR buf[ 38 + 1 ] = {};
+								GUID disk_guid = {};
+								if ( file.Read( buf, 76 ) == 76 && SUCCEEDED( CLSIDFromString( buf, &disk_guid ) ) )
+								{
+									// Clear actual GUID
+									if ( IsEqualGUID( Guid, disk_guid ) )
+									{
+										Guid = GUID();
+									}
+								}
+								else
+								{
+									TRACE( _T("Bad file format: %s\n"), (LPCTSTR)filename );
+								}
+							}
+							else
+							{
+								TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)(CString)error_t(), (LPCTSTR)filename );
+							}
+						}
+						else
+						{
+							TRACE( _T("Disk missed: %c\n"), disk_letter );
+						}
+					}
+				}
 			}
 		}
 		else
@@ -126,20 +171,17 @@ void CItem::ParseURL()
 				CLSID clsid = {};
 				if ( SUCCEEDED( CLSIDFromProgIDEx( progid, &clsid ) ) )
 				{
-					LPOLESTR str_clsid = nullptr;
-					if ( SUCCEEDED( StringFromCLSID( clsid, &str_clsid ) ) )
+					const CString str_clsid = StringFromGUID( clsid );
+					if ( ! str_clsid.IsEmpty() )
 					{
-						CString def_key;
-						def_key.Format( _T("CLSID\\%s"), str_clsid );
-
 						TCHAR def[ MAX_PATH ] = {};
 						DWORD type, def_size = sizeof( def );
-						LSTATUS res = RegQueryValueFull( HKEY_CLASSES_ROOT, def_key, _T(""), &type, reinterpret_cast< LPBYTE >( def ), &def_size );
+						LSTATUS res = RegQueryValueFull( HKEY_CLASSES_ROOT, _T("CLSID\\") + str_clsid, _T(""), &type,
+							reinterpret_cast< LPBYTE >( def ), &def_size );
 						if ( res == ERROR_SUCCESS )
 						{
 							Name = def;
 						}
-						CoTaskMemFree( str_clsid );
 					}
 				}
 			}
@@ -147,7 +189,7 @@ void CItem::ParseURL()
 	}
 }
 
-int CItem::InsertTo(CListCtrl& list, int group_id)
+int CItem::InsertTo(CListCtrl& list, int group_id) const
 {
 	const CString title = GetTitle();
 
@@ -156,23 +198,28 @@ int CItem::InsertTo(CListCtrl& list, int group_id)
 	item.pszText = const_cast< LPTSTR >( static_cast< LPCTSTR >( Protocol ) );
 	item.lParam = reinterpret_cast< LPARAM >( this );
 	item.iItem = list.InsertItem( &item );
+	ASSERT( item.iItem != -1 );
 
 	item.iSubItem = 1;
 	item.mask = LVIF_TEXT;
 	item.pszText = const_cast< LPTSTR >( static_cast< LPCTSTR >( title ) );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;
 }
 
-CItem::operator bool() const noexcept
-{
-	return ! URL.IsEmpty();
-}
-
 // CRoot
 
-CRoot::CRoot(BOOL notif, LPCTSTR url, group_t group)
+CRoot::CRoot(group_t group)
+	: CItem					( group )
+	, IncludedInCrawlScope	( FALSE )
+	, IsHierarchical		( FALSE )
+	, ProvidesNotifications	( FALSE )
+	, UseNotificationsOnly	( FALSE )
+{
+}
+
+CRoot::CRoot(BOOL notif, const CString& url, group_t group)
 	: CItem					( url, group )
 	, IncludedInCrawlScope	( FALSE )
 	, IsHierarchical		( FALSE )
@@ -181,8 +228,8 @@ CRoot::CRoot(BOOL notif, LPCTSTR url, group_t group)
 {
 }
 
-CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot)
-	: CItem					( GROUP_ROOTS )
+CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group)
+	: CItem					( group )
 	, IncludedInCrawlScope	( FALSE )
 	, IsHierarchical		( FALSE )
 	, ProvidesNotifications	( FALSE )
@@ -194,8 +241,6 @@ CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot)
 	{
 		URL = szURL;
 		CoTaskMemFree( szURL );
-
-		ParseURL();
 
 		CLUSION_REASON reason;
 		hr = pScope->IncludedInCrawlScopeEx( URL, &IncludedInCrawlScope, &reason );
@@ -209,35 +254,37 @@ CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot)
 
 		hr = pRoot->get_UseNotificationsOnly( &UseNotificationsOnly );
 		ASSERT( SUCCEEDED( hr ) );
+
+		ParseURL( false );
 	}
 }
 
-int CRoot::InsertTo(CListCtrl& list, int group_id)
+int CRoot::InsertTo(CListCtrl& list, int group_id) const
 {
 	LVITEM item = { LVIF_TEXT };
 	item.iItem = CItem::InsertTo( list, group_id );
 
 	item.iSubItem = 2;
 	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? _T("In Scope") : _T("") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
 	item.pszText = const_cast< LPTSTR >( IsHierarchical ? _T("Hierarchical") : _T("") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
 	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? ( UseNotificationsOnly ? _T("Notify Only") : _T("Notify") ): _T("") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;
 }
 
-HRESULT CRoot::DeleteFrom(ISearchCrawlScopeManager* pScope)
+HRESULT CRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
 	return pScope->RemoveRoot( URL );
 }
 
-HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope )
+HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope ) const
 {
 	CComPtr< ISearchRoot > root;
 	HRESULT hr = root.CoCreateInstance( __uuidof( CSearchRoot ) );
@@ -256,16 +303,44 @@ HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope )
 	return hr;
 }
 
+HRESULT CRoot::Reindex(ISearchCatalogManager* pCatalog) const
+{
+	return pCatalog->ReindexSearchRoot( URL );
+}
+
 // COfflineRoot
 
-COfflineRoot::COfflineRoot(BOOL notif, LPCTSTR url, group_t group)
-	: CRoot		( notif, url, group )
+COfflineRoot::COfflineRoot(const CString& key, group_t group)
+	: CRoot		( group )
 {
+	TCHAR url[ MAX_PATH ] = {};
+	DWORD type, ulr_size = sizeof( url );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		URL = url;
+
+		DWORD notif = 0;
+		DWORD notif_size = sizeof( DWORD );
+		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("ProvidesNotifications"), &type, reinterpret_cast< LPBYTE >( &notif ), &notif_size );
+		ASSERT( res == ERROR_SUCCESS );
+		ProvidesNotifications = ( notif != 0 );
+
+		ParseURL( true );
+	}
 }
 
 // CRule
 
-CRule::CRule(BOOL incl, BOOL def, LPCTSTR url, group_t group)
+CRule::CRule(group_t group)
+	: CItem		( group )
+	, IsInclude	( FALSE )
+	, IsDefault	( FALSE )
+	, HasChild	( FALSE )
+{
+}
+
+CRule::CRule(BOOL incl, BOOL def, const CString& url, group_t group)
 	: CItem		( url, group )
 	, IsInclude	( incl )
 	, IsDefault	( def )
@@ -273,11 +348,11 @@ CRule::CRule(BOOL incl, BOOL def, LPCTSTR url, group_t group)
 {
 }
 
-CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule)
-	: CItem					( GROUP_RULES )
-	, IsInclude				( FALSE )
-	, IsDefault				( FALSE )
-	, HasChild				( FALSE )
+CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t group)
+	: CItem		( group )
+	, IsInclude	( FALSE )
+	, IsDefault	( FALSE )
+	, HasChild	( FALSE )
 {
 	LPWSTR szURL = nullptr;
 	HRESULT hr = pRule->get_PatternOrURL( &szURL );
@@ -286,8 +361,6 @@ CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule)
 		URL = szURL;
 		CoTaskMemFree( szURL );
 
-		ParseURL();
-
 		hr = pRule->get_IsIncluded( &IsInclude );
 		ASSERT( SUCCEEDED( hr ) );
 
@@ -295,43 +368,71 @@ CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule)
 		ASSERT( SUCCEEDED( hr ) );
 
 		hr = pScope->HasChildScopeRule( URL, &HasChild );
+
+		ParseURL( false );
 	}
 }
 
-int CRule::InsertTo(CListCtrl& list, int group_id)
+int CRule::InsertTo(CListCtrl& list, int group_id) const
 {
 	LVITEM item = { LVIF_TEXT };
 	item.iItem = CItem::InsertTo( list, group_id );
 
 	item.iSubItem = 2;
 	item.pszText = const_cast< LPTSTR >( IsInclude ? _T("Include") : _T("Exclude") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
 	item.pszText = const_cast< LPTSTR >( IsDefault ? _T("Default") : _T("User") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
 	item.pszText = const_cast< LPTSTR >( HasChild ? _T("Has child") : _T("") );
-	list.SetItem( &item );
+	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;
 }
 
-HRESULT CRule::DeleteFrom(ISearchCrawlScopeManager* pScope)
+HRESULT CRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
 	return IsDefault ? pScope->RemoveDefaultScopeRule( URL ) : pScope->RemoveScopeRule( URL );
 }
 
-HRESULT CRule::AddTo(ISearchCrawlScopeManager* pScope )
+HRESULT CRule::AddTo(ISearchCrawlScopeManager* pScope ) const
 {
 	return IsDefault ? pScope->AddDefaultScopeRule( URL, IsInclude, FF_INDEXCOMPLEXURLS ) :
 		pScope->AddUserScopeRule( URL, IsInclude, FALSE, FF_INDEXCOMPLEXURLS );
 }
 
+HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
+{
+	return pCatalog->ReindexMatchingURLs( URL );
+}
+
 // CDefaultRule
 
-CDefaultRule::CDefaultRule(BOOL incl, BOOL def, LPCTSTR url, group_t group)
-	: CRule	( incl, def, url, group )
+CDefaultRule::CDefaultRule(const CString& key, group_t group)
+	: CRule	( group )
 {
+	TCHAR url[ MAX_PATH ] = {};
+	DWORD type, ulr_size = sizeof( url );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		URL = url;
+
+		DWORD incl = 0;
+		DWORD incl_size = sizeof( DWORD );
+		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Include"), &type, reinterpret_cast< LPBYTE >( &incl ), &incl_size );
+		ASSERT( res == ERROR_SUCCESS );
+		IsInclude = ( incl != 0 );
+
+		DWORD def = 0;
+		DWORD def_size = sizeof( DWORD );
+		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Default"), &type, reinterpret_cast< LPBYTE >( &def ), &def_size );
+		ASSERT( res == ERROR_SUCCESS );
+		IsDefault = ( def != 0 );
+
+		ParseURL( true );
+	}
 }

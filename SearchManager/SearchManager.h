@@ -23,6 +23,43 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #include "resource.h"
 
+inline CString LoadString(UINT nID)
+{
+	CString str;
+	VERIFY( str.LoadString( nID ) );
+	return str;
+}
+
+inline CString StringFromGUID(REFGUID guid)
+{
+	CString str;
+	LPOLESTR str_guid = nullptr;
+	if ( SUCCEEDED( StringFromIID( guid, &str_guid ) ) )
+	{
+		str = str_guid;
+		CoTaskMemFree( str_guid );
+	}
+	return str;
+}
+
+#include "System.h"
+#include "Error.h"
+
+#define CRLF				_T("\r\n")
+#define CATALOG_NAME		_T("SystemIndex")
+#define INDEXER_SERVICE		_T("WSearch")
+#define DEFAULT_PROTOCOL	_T("defaultroot")
+#define FILE_PROTOCOL		_T("file")
+
+#define INDEXER_VOLUME		_T("System Volume Information\\IndexerVolumeGuid")
+
+#define KEY_SEARCH			_T("SOFTWARE\\Microsoft\\Windows Search")
+#define KEY_PROTOCOLS		KEY_SEARCH _T("\\Gather\\Windows\\SystemIndex\\Protocols")
+#define KEY_ROOTS			KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
+#define KEY_DEFAULT_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\DefaultRules")
+#define KEY_WORKING_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\WorkingSetRules")
+
+
 class CSearchManagerApp : public CWinAppEx
 {
 public:
@@ -37,21 +74,11 @@ protected:
 
 extern CSearchManagerApp theApp;
 
-inline CString LoadString(UINT nID)
-{
-	CString str;
-	VERIFY( str.LoadString( nID ) );
-	return str;
-}
-
-#define KEY_PROTOCOLS		_T("SOFTWARE\\Microsoft\\Windows Search\\ProtocolHandlers")
-#define KEY_ROOTS			_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
-#define KEY_DEFAULT_RULES	_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\DefaultRules")
-#define KEY_WORKING_RULES	_T("SOFTWARE\\Microsoft\\Windows Search\\CrawlScopeManager\\Windows\\SystemIndex\\WorkingSetRules")
-
+// Open registry key in 64-bit and 32-bit parts of the registry
 LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult);
 
+// Read registry key in 64-bit and 32-bit parts of the registry
 LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
 
-// Protocol handler ProgID
+// Read Windows Search protocol handler ProgID
 CString ProgIDFromProtocol(LPCTSTR szProtocol);

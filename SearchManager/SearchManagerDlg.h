@@ -21,7 +21,6 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "Error.h"
 #include "Item.h"
 #include "DialogExSized.h"
 
@@ -80,6 +79,7 @@ protected:
 	CStatic			m_wndName;
 	CStatic			m_wndIndex;
 	CListCtrl		m_wndList;
+	CMFCMenuButton	m_btnReindex;
 	CMFCMenuButton	m_btnAdd;
 
 	CString			m_sStatusCache;
@@ -91,20 +91,37 @@ protected:
 	CComPtr< ISearchCrawlScopeManager >	m_pScope;
 
 	CList< CItem* >	m_List;
-	CMapStringToPtr m_Groups;
+	CMap< CString, LPCTSTR, int, int > m_Groups;
 
-	int GetGroupId(UINT nID, const CString& sPostfix);
+	int GetGroupId(UINT nID, REFGUID guid);
 
 	// Update interface items
 	void UpdateInterface();
 
+	// Resize interface items including list columns sizes
 	void ReSize();
 
 	void Disconnect();
 
+	// Clear all loaded data
+	void Clear();
+
+	// Refresh all data
+	void Refresh();
+
+	// List sorting callback function
+	static int CALLBACK SortProc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+
+	// Enumerate search roots from the Windows Search
 	HRESULT EnumerateRoots(ISearchCrawlScopeManager* pScope);
+
+	// Enumerate search scope rules from the Windows Search
 	HRESULT EnumerateScopeRules(ISearchCrawlScopeManager* pScope);
+
+	// Enumerate search roots from the registry
 	void EnumerateRegistryRoots();
+
+	// Enumerate search scope rules from the registry
 	void EnumerateRegistryDefaultRules();
 
 	inline void SetStatus(UINT nStatus)
@@ -119,17 +136,29 @@ protected:
 	}
 	void SetIndex(const CString& sIndex);
 
-	// Update interface
-	void Update();
-
 	// Add new or edit existing search root
-	void AddRoot(LPCTSTR szURL = nullptr);
+	void AddRoot(const CString& sURL = CString());
 
 	// Add new or edit existing search scope rule
-	void AddRule(BOOL bInclude, BOOL bDefault, LPCTSTR szURL = nullptr);
+	void AddRule(BOOL bInclude = TRUE, BOOL bDefault = TRUE, const CString& sURL = CString());
 
 	// Delete selected item(s)
 	void Delete();
+
+	// Re-index selected item(s)
+	void Reindex();
+
+	// Re-index all item(s)
+	void ReindexAll();
+
+	// Reset whole index
+	void Reset();
+
+	// Reset to defaults (remove user scopes)
+	void Default();
+
+	// Run Explorer for index folder
+	void Explore();
 
 	void OnEdit(const CItem* item);
 
@@ -143,11 +172,9 @@ protected:
 	afx_msg void OnDestroy();
 	afx_msg void OnNMClickSysindex(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnLvnDeleteitemList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnBnClickedReindex();
 	afx_msg void OnBnClickedAdd();
 	afx_msg void OnBnClickedDelete();
-	afx_msg void OnBnClickedReindex();
-	afx_msg void OnBnClickedReset();
-	afx_msg void OnBnClickedDefault();
 	afx_msg void OnLvnItemchangedList(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnBnClickedEdit();
@@ -157,6 +184,8 @@ protected:
 	afx_msg void OnUpdateDelete(CCmdUI *pCmdUI);
 	afx_msg void OnEdit();
 	afx_msg void OnUpdateEdit(CCmdUI *pCmdUI);
+	afx_msg void OnReindex();
+	afx_msg void OnUpdateReindex(CCmdUI *pCmdUI);
 	afx_msg void OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 

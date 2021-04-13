@@ -130,7 +130,7 @@ CString ProgIDFromProtocol(LPCTSTR szProtocol)
 	CString prot_key;
 	prot_key.Format( _T("%s\\%s\\0"), KEY_PROTOCOLS, szProtocol );
 	progid_size = sizeof( progid );
-	res = RegQueryValueFull( HKEY_LOCAL_MACHINE, prot_key, _T("ProgID"), &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
+	res = RegQueryValueFull( HKEY_LOCAL_MACHINE, prot_key, _T("ProgIdHandler"), &type, reinterpret_cast< LPBYTE >( progid ), &progid_size );
 	if ( res == ERROR_SUCCESS )
 	{
 		return progid;

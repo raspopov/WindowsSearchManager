@@ -14,6 +14,7 @@
 #define IDS_STATUS_1                    135
 #define IDS_STATUS_2                    136
 #define IDS_STATUS_3                    137
+#define IDR_REINDEX_MENU                137
 #define IDS_STATUS_4                    138
 #define IDS_STATUS_5                    139
 #define IDS_STATUS_6                    140
@@ -55,9 +56,7 @@
 #define IDC_DELETE                      1010
 #define IDC_EDIT                        1011
 #define IDC_REINDEX                     1012
-#define IDC_RESET                       1013
 #define IDC_ADD                         1014
-#define IDC_DEFAULT                     1015
 #define IDC_BROWSER                     1016
 #define IDC_INFO                        1017
 #define ID_INCLUDE_USER_SCOPE           32775
@@ -68,13 +67,18 @@
 #define ID_COPY                         32781
 #define ID_DELETE                       32782
 #define ID_SEARCHROOT                   32784
+#define ID_REINDEX                      32786
+#define ID_RESET                        32787
+#define ID_REINDEX_ALL                  32788
+#define ID_DEFAULT                      32789
+#define ID_EXPLORE                      32790
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         32785
+#define _APS_NEXT_RESOURCE_VALUE        138
+#define _APS_NEXT_COMMAND_VALUE         32791
 #define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

@@ -21,29 +21,29 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#define DEFAULT_PROTOCOL	_T("defaultroot")
-#define FILE_PROTOCOL		_T("file")
-
 enum group_t { GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_DEFAULT_RULES };
-
-inline bool IsDeletable(group_t group)
-{
-	return ( group == GROUP_ROOTS || group == GROUP_OFFLINE_ROOTS || group == GROUP_RULES || group == GROUP_DEFAULT_RULES );
-}
 
 class CItem
 {
 public:
 	CItem(group_t group) noexcept;
-	CItem(LPCTSTR url, group_t group);
+	CItem(const CString& url, group_t group) noexcept;
 	virtual ~CItem() = default;
 
-	virtual void ParseURL();
-	virtual int InsertTo(CListCtrl& list, int group_id);
-	virtual HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) = 0;
-	virtual HRESULT AddTo(ISearchCrawlScopeManager* pScope) = 0;
+	virtual int InsertTo(CListCtrl& list, int group_id) const;
+	virtual HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const = 0;
+	virtual HRESULT AddTo(ISearchCrawlScopeManager* pScope) const = 0;
+	virtual HRESULT Reindex(ISearchCatalogManager* pCatalog) const = 0;
 
-	operator bool() const noexcept;
+	operator bool() const noexcept
+	{
+		return ! URL.IsEmpty();
+	}
+
+	inline bool operator==(const CItem& item) const noexcept
+	{
+		return IsEqualGUID( item.Guid, Guid ) && ( item.URL == URL );
+	}
 
 	virtual CString GetTitle() const;
 
@@ -53,18 +53,23 @@ public:
 	CString Name;
 	CString User;
 	CString Path;
-	CString Guid;
+	GUID Guid;
+
+protected:
+	void ParseURL(bool bGuid);
 };
 
 class CRoot : public CItem
 {
 public:
-	CRoot(BOOL notif, LPCTSTR url, group_t group = GROUP_ROOTS);
-	CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot);
+	CRoot(group_t group = GROUP_ROOTS);
+	CRoot(BOOL notif, const CString& url, group_t group = GROUP_ROOTS);
+	CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group = GROUP_ROOTS);
 
-	int InsertTo(CListCtrl& list, int group_id) override;
-	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) override;
-	HRESULT AddTo(ISearchCrawlScopeManager* pScope) override;
+	int InsertTo(CListCtrl& list, int group_id) const override;
+	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
+	HRESULT AddTo(ISearchCrawlScopeManager* pScope) const override;
+	HRESULT Reindex(ISearchCatalogManager* pCatalog) const override;
 
 	BOOL IncludedInCrawlScope;	// An indicator of whether the specified URL is included in the crawl scope
 	BOOL IsHierarchical;		// Indicates whether the search is rooted on a hierarchical tree structure
@@ -75,18 +80,20 @@ public:
 class COfflineRoot : public CRoot
 {
 public:
-	COfflineRoot(BOOL notif, LPCTSTR url, group_t group = GROUP_OFFLINE_ROOTS);
+	COfflineRoot(const CString& key, group_t group = GROUP_OFFLINE_ROOTS);
 };
 
 class CRule : public CItem
 {
 public:
-	CRule(BOOL incl, BOOL def, LPCTSTR url, group_t group = GROUP_RULES);
-	CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule);
+	CRule(group_t group = GROUP_RULES);
+	CRule(BOOL incl, BOOL def, const CString& url, group_t group = GROUP_RULES);
+	CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t group = GROUP_RULES);
 
-	int InsertTo(CListCtrl& list, int group_id) override;
-	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) override;
-	HRESULT AddTo(ISearchCrawlScopeManager* pScope) override;
+	int InsertTo(CListCtrl& list, int group_id) const override;
+	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
+	HRESULT AddTo(ISearchCrawlScopeManager* pScope) const override;
+	HRESULT Reindex(ISearchCatalogManager* pCatalog) const override;
 
 	BOOL IsInclude;				// A value identifying whether this rule is an inclusion rule
 	BOOL IsDefault;				// Identifies whether this is a default rule
@@ -96,5 +103,5 @@ public:
 class CDefaultRule : public CRule
 {
 public:
-	CDefaultRule(BOOL incl, BOOL def, LPCTSTR url, group_t group = GROUP_DEFAULT_RULES);
+	CDefaultRule(const CString& key, group_t group = GROUP_DEFAULT_RULES);
 };

@@ -25,16 +25,12 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include "stdafx.h"
 #include "SearchManager.h"
 #include "SearchManagerDlg.h"
-#include "UrlDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 #define COLUMN_SIZE		80
-#define CRLF			_T("\r\n")
-#define CATALOG_NAME	_T("SystemIndex")
-#define INDEXER_SERVICE	_T("WSearch")
 
 IMPLEMENT_DYNAMIC(CSearchManagerDlg, CDialogExSized)
 
@@ -54,6 +50,7 @@ void CSearchManagerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_NAME, m_wndName);
 	DDX_Control(pDX, IDC_INDEX, m_wndIndex);
 	DDX_Control(pDX, IDC_LIST, m_wndList);
+	DDX_Control(pDX, IDC_REINDEX, m_btnReindex);
 	DDX_Control(pDX, IDC_ADD, m_btnAdd);
 }
 
@@ -64,11 +61,9 @@ BEGIN_MESSAGE_MAP(CSearchManagerDlg, CDialogExSized)
 	ON_WM_DESTROY()
 	ON_NOTIFY(NM_CLICK, IDC_SYSINDEX, &CSearchManagerDlg::OnNMClickSysindex)
 	ON_NOTIFY(LVN_DELETEITEM, IDC_LIST, &CSearchManagerDlg::OnLvnDeleteitemList)
+	ON_BN_CLICKED(IDC_REINDEX, &CSearchManagerDlg::OnBnClickedReindex)
 	ON_BN_CLICKED(IDC_ADD, &CSearchManagerDlg::OnBnClickedAdd)
 	ON_BN_CLICKED(IDC_DELETE, &CSearchManagerDlg::OnBnClickedDelete)
-	ON_BN_CLICKED(IDC_REINDEX, &CSearchManagerDlg::OnBnClickedReindex)
-	ON_BN_CLICKED(IDC_RESET, &CSearchManagerDlg::OnBnClickedReset)
-	ON_BN_CLICKED(IDC_DEFAULT, &CSearchManagerDlg::OnBnClickedDefault)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST, &CSearchManagerDlg::OnLvnItemchangedList)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST, &CSearchManagerDlg::OnNMDblclkList)
 	ON_BN_CLICKED(IDC_EDIT, &CSearchManagerDlg::OnBnClickedEdit)
@@ -80,29 +75,9 @@ BEGIN_MESSAGE_MAP(CSearchManagerDlg, CDialogExSized)
 	ON_UPDATE_COMMAND_UI(ID_DELETE, &CSearchManagerDlg::OnUpdateDelete)
 	ON_NOTIFY(NM_CUSTOMDRAW, IDC_LIST, &CSearchManagerDlg::OnNMCustomdrawList)
 	ON_WM_SIZE()
+	ON_COMMAND(ID_REINDEX, &CSearchManagerDlg::OnReindex)
+	ON_UPDATE_COMMAND_UI(ID_REINDEX, &CSearchManagerDlg::OnUpdateReindex)
 END_MESSAGE_MAP()
-
-int CSearchManagerDlg::GetGroupId(UINT nID, const CString& sPostfix)
-{
-	CString name = LoadString( nID );
-	if ( ! sPostfix.IsEmpty() )
-	{
-		name += _T(" @ ");
-		name += sPostfix;
-	}
-
-	void* value;
-	if ( m_Groups.Lookup( name, value ) )
-	{
-		return reinterpret_cast< int >( value );
-	}
-
-	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
-		const_cast< LPTSTR >( static_cast< LPCTSTR >( name ) ), 0, nullptr, 0, m_wndList.GetGroupCount() };
-	m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots );
-	m_Groups.SetAt( name, reinterpret_cast< void* >( grpRoots.iGroupId ) );
-	return grpRoots.iGroupId;
-}
 
 BOOL CSearchManagerDlg::OnInitDialog()
 {
@@ -130,11 +105,17 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	if ( auto menu = theApp.GetContextMenuManager() )
 	{
+		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_STATE, 0, MFS_DEFAULT };
+
 		menu->AddMenu( _T("IDR_ADD_MENU"), IDR_ADD_MENU );
 		menu->AddMenu( _T("IDR_LIST_MENU"), IDR_LIST_MENU );
+		menu->AddMenu( _T("IDR_REINDEX_MENU"), IDR_REINDEX_MENU );
+
+		m_btnReindex.m_bOSMenu = FALSE;
+		SetMenuItemInfo( m_btnReindex.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_REINDEX_MENU ), 0 ), 0, TRUE, &mi );
 
 		m_btnAdd.m_bOSMenu = FALSE;
-		m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 );
+		SetMenuItemInfo( m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 ), 0, TRUE, &mi );
 	}
 
 	ReSize();
@@ -150,18 +131,15 @@ void CSearchManagerDlg::OnPaint()
 {
 	if ( IsIconic() )
 	{
-		CPaintDC dc(this);
-
-		SendMessage( WM_ICONERASEBKGND, reinterpret_cast<WPARAM>( dc.GetSafeHdc() ), 0 );
-
-		int cxIcon = GetSystemMetrics( SM_CXICON );
-		int cyIcon = GetSystemMetrics( SM_CYICON );
+		CPaintDC dc( this );
+		SendMessage( WM_ICONERASEBKGND, reinterpret_cast< WPARAM >( dc.GetSafeHdc() ), 0 );
+		const int cxIcon = GetSystemMetrics( SM_CXICON );
+		const int cyIcon = GetSystemMetrics( SM_CYICON );
 		CRect rect;
-		GetClientRect(&rect);
-		int x = (rect.Width() - cxIcon + 1) / 2;
-		int y = (rect.Height() - cyIcon + 1) / 2;
-
-		dc.DrawIcon(x, y, m_hIcon);
+		GetClientRect( &rect );
+		const int x = ( rect.Width() - cxIcon + 1 ) / 2;
+		const int y = ( rect.Height() - cyIcon + 1 ) / 2;
+		dc.DrawIcon( x, y, m_hIcon );
 	}
 	else
 	{
@@ -178,7 +156,7 @@ void CSearchManagerDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	if ( nIDEvent == 1 )
 	{
-		Update();
+		Refresh();
 	}
 
 	MSG msg;
@@ -209,218 +187,16 @@ void CSearchManagerDlg::Disconnect()
 
 void CSearchManagerDlg::UpdateInterface()
 {
-	const BOOL bCatalog = ( m_pCatalog != false );
-	const BOOL bScope = ( m_pScope != false );
-	BOOL bSingle = FALSE;
-	BOOL bSelected = FALSE;
-	if ( bScope )
-	{
-		if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
-		{
-			const int index = m_wndList.GetNextSelectedItem( pos );
-			if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
-			{
-				bSelected = IsDeletable( item->Group );
-				bSingle = bSelected && ! pos;
-			}
-		}
-	}
+	const BOOL bCatalog = static_cast< bool >( m_pCatalog );
+	const BOOL bScope = static_cast< bool >( m_pScope );
+	const auto count = m_wndList.GetSelectedCount();
+	const BOOL bSingle = bScope && count == 1;
+	const BOOL bSelected = bScope && count > 0;
+
 	GetDlgItem( IDC_REINDEX )->EnableWindow( bCatalog );
-	GetDlgItem( IDC_RESET )->EnableWindow( bCatalog );
-	GetDlgItem( IDC_DEFAULT )->EnableWindow( bScope );
 	GetDlgItem( IDC_ADD )->EnableWindow( bScope );
 	GetDlgItem( IDC_EDIT )->EnableWindow( bSingle );
 	GetDlgItem( IDC_DELETE )->EnableWindow( bSelected );
-}
-
-int CALLBACK SortProc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
-{
-    UNREFERENCED_PARAMETER( lParamSort );
-    return reinterpret_cast< const CItem* >( lParam1 )->URL.CompareNoCase( reinterpret_cast< const CItem* >( lParam2 )->URL );
-}
-
-void CSearchManagerDlg::Update()
-{
-	HRESULT hr = S_OK;
-
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() )
-	{
-		return;
-	}
-
-	const bool bRefreshing = m_bRefresh;
-
-	if ( m_bRefresh )
-	{
-		m_bRefresh = false;
-
-		CWaitCursor wc;
-
-		CString sVersion = _T("Unknown");
-
-		m_wndList.DeleteAllItems();
-		m_List.RemoveAll();
-
-		// Release old connection
-		if ( m_pCatalog )
-		{
-			SetStatus( IDS_DISCONNECTING );
-			SetIndex( _T("") );
-
-			Disconnect();
-
-			SleepEx( 500, FALSE );
-		}
-
-		// Create a new connection
-		SetStatus( IDS_CONNECTING );
-		CComPtr< ISearchManager > pManager;
-		hr = pManager.CoCreateInstance( __uuidof( CSearchManager ) );
-		if ( SUCCEEDED( hr ) )
-		{
-			// Get version
-			LPWSTR szVersion = nullptr;
-			hr = pManager->GetIndexerVersionStr( &szVersion );
-			if ( SUCCEEDED( hr ) )
-			{
-				sVersion = szVersion;
-				CoTaskMemFree( szVersion );
-			}
-
-			// Get catalog
-			SetStatus( IDS_GETTING_CATALOG );
-			hr = pManager->GetCatalog( CATALOG_NAME, &m_pCatalog );
-			if ( SUCCEEDED( hr ) )
-			{
-				// Get scope
-				SetStatus( IDS_ENUMERATING );
-				hr = m_pCatalog->GetCrawlScopeManager( &m_pScope );
-				if ( SUCCEEDED( hr ) )
-				{
-					EnumerateRoots( m_pScope );
-					EnumerateScopeRules( m_pScope );
-				}
-			}
-		}
-
-		EnumerateRegistryRoots();
-		EnumerateRegistryDefaultRules();
-
-		m_wndList.SortItems( &SortProc, 0 );
-
-		SetWindowText( LoadString( AFX_IDS_APP_TITLE ) + _T(" - Indexer version: ") + sVersion );
-
-		if ( SUCCEEDED( hr ) )
-		{
-			UpdateInterface();
-
-			UpdateWindow();
-		}
-		else
-		{
-			SleepEx( 500, FALSE );
-
-			const error_t result( hr );
-			SetStatus( result.msg + CRLF CRLF + result.error + CRLF CRLF + LoadString( IDS_CLOSED ) );
-
-			Disconnect();
-		}
-	}
-
-	CString sStatus;
-
-	if ( m_pCatalog )
-	{
-		LONG numitems = 0;
-		hr = m_pCatalog->NumberOfItems( &numitems );
-		if ( SUCCEEDED( hr ) )
-		{
-			sStatus.AppendFormat( _T("Total items      \t\t: %ld") CRLF, numitems );
-
-			DWORD timeout = 0;
-			hr = m_pCatalog->get_ConnectTimeout( &timeout );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Connect timeout     \t: %lu s") CRLF, timeout );
-			}
-
-			hr = m_pCatalog->get_DataTimeout( &timeout );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Data timeout        \t: %lu s") CRLF, timeout );
-			}
-
-			BOOL diacritic = FALSE;
-			hr = m_pCatalog->get_DiacriticSensitivity( &diacritic );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Diacritic sensitivity\t: %s") CRLF, ( diacritic ? _T("yes") : _T("no") ) );
-			}
-
-			LONG pendingitems = 0, queued = 0, highpri = 0;
-			hr = m_pCatalog->NumberOfItemsToIndex( &pendingitems, &queued, &highpri );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat(
-					_T("Pending queue      \t: %ld") CRLF
-					_T("Notification queue \t: %ld") CRLF
-					_T("High priority queue\t: %ld") CRLF,
-					pendingitems, queued, highpri );
-			}
-
-			CatalogStatus status;
-			CatalogPausedReason reason;
-			hr = m_pCatalog->GetCatalogStatus( &status, &reason );
-			if ( SUCCEEDED( hr ) )
-			{
-				if ( status >= CATALOG_STATUS_IDLE && status <= CATALOG_STATUS_SHUTTING_DOWN )
-				{
-					sStatus += CRLF;
-					sStatus += LoadString( IDS_STATUS_1 + static_cast< int >( status ) );
-				}
-				if ( status == CATALOG_STATUS_PAUSED )
-				{
-					if ( reason > CATALOG_PAUSED_REASON_NONE && reason <= CATALOG_PAUSED_REASON_UPGRADING )
-					{
-						sStatus += CRLF CRLF;
-						sStatus += LoadString( IDS_REASON_1 + static_cast< int >( reason ) - 1 );
-					}
-				}
-			}
-		}
-
-		if ( SUCCEEDED( hr ) )
-		{
-			SetStatus( sStatus );
-		}
-		else
-		{
-			const error_t result( hr );
-			SetStatus( result.msg + CRLF CRLF + result.error );
-
-			if ( FAILED( hr ) )
-			{
-				Disconnect();
-			}
-		}
-	}
-
-	if ( m_pCatalog )
-	{
-		LPWSTR szIndex = nullptr;
-		hr = m_pCatalog->URLBeingIndexed( &szIndex );
-		if ( SUCCEEDED( hr ) )
-		{
-			SetIndex( szIndex );
-			CoTaskMemFree( szIndex );
-		}
-		else
-		{
-			const error_t result( hr );
-			SetIndex( result.msg + _T(" ") + result.error );
-		}
-	}
 }
 
 void CSearchManagerDlg::SetStatus(const CString& sStatus)
@@ -457,179 +233,6 @@ void CSearchManagerDlg::OnNMClickSysindex(NMHDR * /*pNMHDR*/, LRESULT *pResult)
 	SleepEx( 500, FALSE );
 
 	*pResult = 0;
-}
-
-HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
-{
-	HRESULT hr = S_OK;
-
-	CComPtr< IEnumSearchRoots > pRoots;
-	hr = pScope->EnumerateRoots( &pRoots );
-	if ( SUCCEEDED( hr ) )
-	{
-		for (;;)
-		{
-			CComPtr< ISearchRoot > pRoot;
-			hr = pRoots->Next( 1, &pRoot, nullptr );
-			if ( hr != S_OK )
-			{
-				break;
-			}
-
-			CAutoPtr< CRoot > root( new CRoot( pScope, pRoot ) );
-			if ( *root )
-			{
-				VERIFY( root->InsertTo( m_wndList, GetGroupId( IDS_ROOTS, _T("") ) ) != -1 );
-				m_List.AddTail( root.Detach() );
-			}
-		}
-	}
-
-	return hr;
-}
-
-HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
-{
-	HRESULT hr = S_OK;
-
-	CComPtr< IEnumSearchScopeRules > pRules;
-	hr = pScope->EnumerateScopeRules( &pRules );
-	if ( SUCCEEDED( hr ) )
-	{
-		for (;;)
-		{
-			CComPtr< ISearchScopeRule > pRule;
-			hr = pRules->Next( 1, &pRule, nullptr );
-			if ( hr != S_OK )
-			{
-				break;
-			}
-
-			CAutoPtr< CRule > rule( new CRule( pScope, pRule ) );
-			if ( *rule )
-			{
-				VERIFY( rule->InsertTo( m_wndList, GetGroupId( IDS_RULES, _T("") ) ) != -1 );
-				m_List.AddTail( rule.Detach() );
-			}
-		}
-	}
-
-	return hr;
-}
-
-void CSearchManagerDlg::EnumerateRegistryRoots()
-{
-	HKEY hRootsKey;
-	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_ROOTS, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
-	if ( res == ERROR_SUCCESS )
-	{
-		TCHAR name[ MAX_PATH ] = {};
-		TCHAR url[ MAX_PATH ] = {};
-
-		for ( DWORD i = 0; ; ++i )
-		{
-			name[ 0 ] = 0;
-			DWORD name_size = _countof( name );
-			res = SHEnumKeyEx( hRootsKey, i, name, &name_size );
-			if ( res != ERROR_SUCCESS )
-			{
-				break;
-			}
-
-			CString key;
-			key.Format( _T("%s\\%s"), KEY_ROOTS, name );
-			DWORD type, ulr_size = sizeof( url );
-			res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
-			if ( res == ERROR_SUCCESS )
-			{
-				bool found = false;
-				for ( POSITION pos = m_List.GetHeadPosition(); pos; )
-				{
-					auto item = m_List.GetNext( pos );
-					if ( item->Group == GROUP_ROOTS && item->URL == url )
-					{
-						found = true;
-						break;
-					}
-				}
-
-				if ( ! found )
-				{
-					DWORD notif = FALSE;
-					DWORD notif_size = sizeof( DWORD );
-					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("ProvidesNotifications"), &type, reinterpret_cast< LPBYTE >( &notif ), &notif_size );
-					ASSERT( res == ERROR_SUCCESS );
-
-					CAutoPtr< COfflineRoot > root( new COfflineRoot( notif, url ) );
-					root->ParseURL();
-
-					VERIFY( root->InsertTo( m_wndList, GetGroupId( IDS_DEFAULT_ROOTS, root->Guid ) ) != -1 );
-					m_List.AddTail( root.Detach() );
-				}
-			}
-		}
-		RegCloseKey( hRootsKey );
-	}
-}
-
-void CSearchManagerDlg::EnumerateRegistryDefaultRules()
-{
-	HKEY hRootsKey;
-	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
-	if ( res == ERROR_SUCCESS )
-	{
-		TCHAR name[ MAX_PATH ] = {};
-		TCHAR url[ MAX_PATH ] = {};
-
-		for ( DWORD i = 0; ; ++i )
-		{
-			name[ 0 ] = 0;
-			DWORD name_size = _countof( name );
-			res = SHEnumKeyEx( hRootsKey, i, name, &name_size );
-			if ( res != ERROR_SUCCESS )
-			{
-				break;
-			}
-
-			CString key;
-			key.Format( _T("%s\\%s"), KEY_DEFAULT_RULES, name );
-			DWORD type, ulr_size = sizeof( url );
-			res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
-			if ( res == ERROR_SUCCESS )
-			{
-				bool found = false;
-				for ( POSITION pos = m_List.GetHeadPosition(); pos; )
-				{
-					auto item = m_List.GetNext( pos );
-					if ( item->Group == GROUP_RULES && item->URL == url )
-					{
-						found = true;
-						break;
-					}
-				}
-
-				if ( ! found )
-				{
-					DWORD incl = FALSE;
-					DWORD incl_size = sizeof( DWORD );
-					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Include"), &type, reinterpret_cast< LPBYTE >( &incl ), &incl_size );
-					ASSERT( res == ERROR_SUCCESS );
-
-					DWORD def = FALSE;
-					DWORD def_size = sizeof( DWORD );
-					res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Default"), &type, reinterpret_cast< LPBYTE >( &def ), &def_size );
-					ASSERT( res == ERROR_SUCCESS );
-
-					CAutoPtr< CDefaultRule > rule( new CDefaultRule( incl, def, url ) );
-					rule->ParseURL();
-
-					VERIFY( rule->InsertTo( m_wndList, GetGroupId( IDS_DEFAULT_RULES, rule->Guid ) ) != -1 );
-					m_List.AddTail( rule.Detach() );
-				}
-			}
-		}
-		RegCloseKey( hRootsKey );
-	}
 }
 
 void CSearchManagerDlg::OnOK()
@@ -675,7 +278,7 @@ BOOL CSearchManagerDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			else
 			{
 				// Insert
-				AddRule( TRUE, TRUE );
+				AddRule();
 				return TRUE;
 			}
 		}
@@ -715,6 +318,29 @@ void CSearchManagerDlg::OnBnClickedDelete()
 	Delete();
 }
 
+void CSearchManagerDlg::OnBnClickedReindex()
+{
+	switch ( m_btnReindex.m_nMenuResult )
+	{
+	case ID_REINDEX_ALL:
+	default:
+		ReindexAll();
+		break;
+
+	case ID_RESET:
+		Reset();
+		break;
+
+	case ID_DEFAULT:
+		Default();
+		break;
+
+	case ID_EXPLORE:
+		Explore();
+		break;
+	}
+}
+
 void CSearchManagerDlg::OnBnClickedAdd()
 {
 	switch ( m_btnAdd.m_nMenuResult )
@@ -729,81 +355,16 @@ void CSearchManagerDlg::OnBnClickedAdd()
 
 	case ID_INCLUDE_DEFAULT_SCOPE:
 	default:
-		AddRule( TRUE, TRUE );
+		AddRule();
 		break;
 
 	case ID_EXCLUDE_DEFAULT_SCOPE:
-		AddRule( FALSE, TRUE );
+		AddRule( FALSE );
 		break;
 
 	case ID_SEARCHROOT:
 		AddRoot();
 		break;
-	}
-}
-
-void CSearchManagerDlg::OnBnClickedReindex()
-{
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pCatalog )
-	{
-		return;
-	}
-
-	if ( AfxMessageBox( IDS_REINDEX_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
-	{
-		const HRESULT hr = m_pCatalog->Reindex();
-
-		const error_t result( hr );
-		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
-
-		m_bRefresh = true;
-	}
-}
-
-void CSearchManagerDlg::OnBnClickedReset()
-{
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pCatalog )
-	{
-		return;
-	}
-
-	if ( AfxMessageBox( IDS_RESET_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
-	{
-		const HRESULT hr = m_pCatalog->Reset();
-
-		const error_t result( hr );
-		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
-
-		m_bRefresh = true;
-	}
-}
-
-void CSearchManagerDlg::OnBnClickedDefault()
-{
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pScope )
-	{
-		return;
-	}
-
-	if ( AfxMessageBox( IDS_DEFAULT_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
-	{
-		HRESULT hr = m_pScope->RevertToDefaultScopes();
-		if ( SUCCEEDED( hr ) )
-		{
-			const HRESULT hr_save = m_pScope->SaveAll();
-			if ( hr == S_OK || FAILED( hr_save ) )
-			{
-				hr = hr_save;
-			}
-		}
-
-		const error_t result( hr );
-		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
-
-		m_bRefresh = true;
 	}
 }
 
@@ -833,14 +394,7 @@ void CSearchManagerDlg::OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult)
 
 void CSearchManagerDlg::OnBnClickedEdit()
 {
-	if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
-	{
-		const int index = m_wndList.GetNextSelectedItem( pos );
-		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
-		{
-			OnEdit( item );
-		}
-	}
+	OnEdit();
 }
 
 void CSearchManagerDlg::OnEdit(const CItem* item)
@@ -902,7 +456,7 @@ void CSearchManagerDlg::OnCopy()
 	{
 		if ( EmptyClipboard() )
 		{
-			const size_t nLen = ( values.GetLength() + 1 ) * sizeof( TCHAR );
+			const size_t nLen = ( static_cast< size_t >( values.GetLength() ) + 1 ) * sizeof( TCHAR );
 			if ( HGLOBAL hGlob = GlobalAlloc( GMEM_FIXED, nLen ) )
 			{
 				memcpy_s( hGlob, nLen, static_cast< LPCTSTR >( values ), nLen );
@@ -924,44 +478,34 @@ void CSearchManagerDlg::OnDelete()
 
 void CSearchManagerDlg::OnUpdateDelete(CCmdUI *pCmdUI)
 {
-	BOOL enable = FALSE;
-	if ( m_pScope )
-	{
-		if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
-		{
-			const int index = m_wndList.GetNextSelectedItem( pos );
-			if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
-			{
-				enable = IsDeletable( item->Group );
-			}
-		}
-	}
-	pCmdUI->Enable( enable );
+	pCmdUI->Enable( m_pScope && m_wndList.GetSelectedCount() > 0 );
 }
 
 void CSearchManagerDlg::OnEdit()
 {
-	OnBnClickedEdit();
+	if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
+	{
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
+		{
+			OnEdit( item );
+		}
+	}
 }
 
 void CSearchManagerDlg::OnUpdateEdit(CCmdUI *pCmdUI)
 {
-	BOOL enable = FALSE;
-	if ( m_pScope )
-	{
-		if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
-		{
-			const int index = m_wndList.GetNextSelectedItem( pos );
-			if ( ! pos )
-			{
-				if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
-				{
-					enable = IsDeletable( item->Group );
-				}
-			}
-		}
-	}
-	pCmdUI->Enable( enable );
+	pCmdUI->Enable( m_pScope && m_wndList.GetSelectedCount() == 1 );
+}
+
+void CSearchManagerDlg::OnReindex()
+{
+	Reindex();
+}
+
+void CSearchManagerDlg::OnUpdateReindex(CCmdUI *pCmdUI)
+{
+	pCmdUI->Enable( m_pCatalog && m_wndList.GetSelectedCount() > 0 );
 }
 
 void CSearchManagerDlg::OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult)
