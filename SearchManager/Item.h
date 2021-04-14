@@ -47,13 +47,13 @@ public:
 
 	virtual CString GetTitle() const;
 
-	group_t	Group;				// Group type: root or rule
+	group_t	Group;				// Group type
 	CString URL;				// The pattern or URL for the rule, or the URL of the starting point for search root
-	CString Protocol;
-	CString Name;
-	CString User;
-	CString Path;
-	GUID Guid;
+	CString Protocol;			// Protocol name ("file", "iehistory", etc.)
+	CString Name;				// Protocol handler name
+	CString User;				// User name (SID) if any
+	CString Path;				// Search root/scope path
+	GUID Guid;					// Search volume GUID for "file" protocol
 
 protected:
 	void ParseURL(bool bGuid);
@@ -81,6 +81,10 @@ class COfflineRoot : public CRoot
 {
 public:
 	COfflineRoot(const CString& key, group_t group = GROUP_OFFLINE_ROOTS);
+
+	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
+
+	CString Key;				// Registry key
 };
 
 class CRule : public CItem
@@ -104,4 +108,8 @@ class CDefaultRule : public CRule
 {
 public:
 	CDefaultRule(const CString& key, group_t group = GROUP_DEFAULT_RULES);
+
+	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
+
+	CString Key;				// Registry key
 };

@@ -33,8 +33,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 void CSearchManagerDlg::AddRoot(const CString& sURL)
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pScope )
+	if ( ! m_pScope )
 	{
 		return;
 	}
@@ -82,8 +81,7 @@ void CSearchManagerDlg::AddRoot(const CString& sURL)
 
 void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sURL)
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pScope )
+	if ( ! m_pScope )
 	{
 		return;
 	}
@@ -133,8 +131,7 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sUR
 
 void CSearchManagerDlg::Delete()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pScope )
+	if ( ! m_pScope )
 	{
 		return;
 	}
@@ -210,13 +207,12 @@ void CSearchManagerDlg::Delete()
 
 void CSearchManagerDlg::Reindex()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pCatalog )
+	if ( ! m_pCatalog )
 	{
 		return;
 	}
 
-	// Enumerate items to delete
+	// Enumerate items to re-index
 	CList< const CItem* > to_delete;
 	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 	{
@@ -253,8 +249,7 @@ void CSearchManagerDlg::Reindex()
 
 void CSearchManagerDlg::ReindexAll()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pCatalog )
+	if ( ! m_pCatalog )
 	{
 		return;
 	}
@@ -272,8 +267,7 @@ void CSearchManagerDlg::ReindexAll()
 
 void CSearchManagerDlg::Reset()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pCatalog )
+	if ( ! m_pCatalog )
 	{
 		return;
 	}
@@ -289,10 +283,50 @@ void CSearchManagerDlg::Reset()
 	}
 }
 
+void CSearchManagerDlg::Rebuild()
+{
+	CString folder = GetSearchDirectory();
+	if ( ! folder.IsEmpty() )
+	{
+		if ( AfxMessageBox( IDS_REBUILD_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+		{
+			if ( StopWindowsSearch() )
+			{
+				{
+					CWaitCursor wc;
+
+					// Try to get System privileges
+					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
+
+					// Delete Windows Search directory
+					SetStatus( IDS_INDEXER_DELETING );
+					folder.AppendChar( 0 ); // double null terminated for SHFileOperation
+					SHFILEOPSTRUCT fop = { GetSafeHwnd(), FO_DELETE, (LPCTSTR)folder, nullptr, FOF_ALLOWUNDO | FOF_NOCONFIRMATION };
+					if ( GetFileAttributes( folder ) == INVALID_FILE_ATTRIBUTES || SHFileOperation( &fop ) == 0 )
+					{
+						// Set an option to revert to initial state
+						const DWORD zero = 0;
+						DWORD res = RegSetValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("SetupCompletedSuccessfully"), REG_DWORD,
+							reinterpret_cast< const BYTE* >( &zero ), sizeof( zero ) );
+						if ( res != ERROR_SUCCESS )
+						{
+							const error_t error( HRESULT_FROM_WIN32( res ) );
+							AfxMessageBox( LoadString( IDS_INDEXER_REG_ERROR ) + _T("\n\n") + error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+						}
+					}
+
+					RevertToSelf();
+				}
+
+				StartWindowsSearch();
+			}
+		}
+	}
+}
+
 void CSearchManagerDlg::Default()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() || ! m_pScope )
+	if ( ! m_pScope )
 	{
 		return;
 	}
@@ -320,15 +354,59 @@ void CSearchManagerDlg::Explore()
 {
 	CWaitCursor wc;
 
-	TCHAR folder[ MAX_PATH ] = {};
-	DWORD type, folder_size = sizeof( folder );
-	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size );
-	if ( res == ERROR_SUCCESS )
+	const CString folder = GetSearchDirectory();
+	if ( ! folder.IsEmpty() )
 	{
 		const CString params = CString( _T("/k cd /d \"") ) + folder + _T("Applications\\Windows\\\" && dir");
 		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, _T("cmd.exe"), params, nullptr, SW_SHOWDEFAULT };
 		VERIFY( ShellExecuteEx( &sei ) );
 
 		SleepEx( 500, FALSE );
+	}
+}
+
+bool CSearchManagerDlg::StopWindowsSearch()
+{
+	CWaitCursor wc;
+
+	Clear();
+
+	Disconnect();
+
+	SetStatus( IDS_INDEXER_STOPPING );
+
+	m_bRefresh = true;
+
+	const DWORD res = StopService( INDEXER_SERVICE );
+	if ( res == ERROR_SUCCESS )
+	{
+		return true;
+	}
+	else
+	{
+		const error_t error( HRESULT_FROM_WIN32( res ) );
+		AfxMessageBox( LoadString( IDS_INDEXER_STOP_ERROR ) + _T("\n\n") + error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+		return false;
+	}
+}
+
+bool CSearchManagerDlg::StartWindowsSearch()
+{
+	CWaitCursor wc;
+
+	SetStatus( IDS_INDEXER_STARTING );
+
+	m_bRefresh = true;
+
+	const DWORD res = StartService( INDEXER_SERVICE );
+	if ( res == ERROR_SUCCESS )
+	{
+		return true;
+	}
+	else
+	{
+		const error_t error( HRESULT_FROM_WIN32( res ) );
+		AfxMessageBox( LoadString( IDS_INDEXER_START_ERROR ) + _T("\n\n") + error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+		return false;
 	}
 }

@@ -16,13 +16,13 @@
 #define IDS_STATUS_3                    137
 #define IDR_REINDEX_MENU                137
 #define IDS_STATUS_4                    138
+#define IDR_SERVICE_MENU                138
 #define IDS_STATUS_5                    139
 #define IDS_STATUS_6                    140
 #define IDS_STATUS_7                    141
 #define IDS_CLOSED                      142
 #define IDS_ADMIN                       143
 #define IDS_ENUMERATING                 144
-#define IDS_DISCONNECTING               145
 #define IDS_ROOTS                       146
 #define IDS_RULES                       147
 #define IDS_ADD_SCOPE                   148
@@ -48,14 +48,22 @@
 #define IDS_ADD_ROOT_INFO               168
 #define IDS_DEFAULT_ROOTS               169
 #define IDS_DEFAULT_RULES               170
+#define IDS_REBUILD_CONFIRM             171
+#define IDS_INDEXER_STOP_ERROR          172
+#define IDS_INDEXER_START_ERROR         173
+#define IDS_INDEXER_STOPPING            174
+#define IDS_INDEXER_STARTING            175
+#define IDS_INDEXER_REG_ERROR           176
+#define IDS_INDEXER_DELETING            177
 #define IDC_STATUS                      1000
 #define IDC_NAME                        1001
-#define IDC_INDEX                       1003
+#define IDC_LAST_INDEXED                1003
 #define IDC_SYSINDEX                    1005
 #define IDC_LIST                        1009
 #define IDC_DELETE                      1010
 #define IDC_EDIT                        1011
-#define IDC_REINDEX                     1012
+#define IDC_INDEX                       1012
+#define IDC_SERVICE                     1013
 #define IDC_ADD                         1014
 #define IDC_BROWSER                     1016
 #define IDC_INFO                        1017
@@ -72,13 +80,17 @@
 #define ID_REINDEX_ALL                  32788
 #define ID_DEFAULT                      32789
 #define ID_EXPLORE                      32790
+#define ID_REBUILD                      32791
+#define ID_0_STARTWINDOWSSEARCHSERVICE  32792
+#define ID_SERVICE_START                32793
+#define ID_SERVICE_STOP                 32794
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        138
-#define _APS_NEXT_COMMAND_VALUE         32791
+#define _APS_NEXT_RESOURCE_VALUE        139
+#define _APS_NEXT_COMMAND_VALUE         32795
 #define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

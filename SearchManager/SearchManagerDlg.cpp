@@ -48,9 +48,10 @@ void CSearchManagerDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Control(pDX, IDC_STATUS, m_wndStatus);
 	DDX_Control(pDX, IDC_NAME, m_wndName);
-	DDX_Control(pDX, IDC_INDEX, m_wndIndex);
+	DDX_Control(pDX, IDC_LAST_INDEXED, m_wndLastIndexed);
 	DDX_Control(pDX, IDC_LIST, m_wndList);
-	DDX_Control(pDX, IDC_REINDEX, m_btnReindex);
+	DDX_Control(pDX, IDC_INDEX, m_btnReindex);
+	DDX_Control(pDX, IDC_SERVICE, m_btnService);
 	DDX_Control(pDX, IDC_ADD, m_btnAdd);
 }
 
@@ -61,7 +62,8 @@ BEGIN_MESSAGE_MAP(CSearchManagerDlg, CDialogExSized)
 	ON_WM_DESTROY()
 	ON_NOTIFY(NM_CLICK, IDC_SYSINDEX, &CSearchManagerDlg::OnNMClickSysindex)
 	ON_NOTIFY(LVN_DELETEITEM, IDC_LIST, &CSearchManagerDlg::OnLvnDeleteitemList)
-	ON_BN_CLICKED(IDC_REINDEX, &CSearchManagerDlg::OnBnClickedReindex)
+	ON_BN_CLICKED(IDC_INDEX, &CSearchManagerDlg::OnBnClickedIndex)
+	ON_BN_CLICKED(IDC_SERVICE, &CSearchManagerDlg::OnBnClickedService)
 	ON_BN_CLICKED(IDC_ADD, &CSearchManagerDlg::OnBnClickedAdd)
 	ON_BN_CLICKED(IDC_DELETE, &CSearchManagerDlg::OnBnClickedDelete)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST, &CSearchManagerDlg::OnLvnItemchangedList)
@@ -110,12 +112,20 @@ BOOL CSearchManagerDlg::OnInitDialog()
 		menu->AddMenu( _T("IDR_ADD_MENU"), IDR_ADD_MENU );
 		menu->AddMenu( _T("IDR_LIST_MENU"), IDR_LIST_MENU );
 		menu->AddMenu( _T("IDR_REINDEX_MENU"), IDR_REINDEX_MENU );
+		menu->AddMenu( _T("IDR_SERVICE_MENU"), IDR_SERVICE_MENU );
 
+		m_btnReindex.m_bDefaultClick = FALSE;
 		m_btnReindex.m_bOSMenu = FALSE;
-		SetMenuItemInfo( m_btnReindex.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_REINDEX_MENU ), 0 ), 0, TRUE, &mi );
+		m_btnReindex.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_REINDEX_MENU ), 0 );
 
+		m_btnService.m_bDefaultClick = FALSE;
+		m_btnService.m_bOSMenu = FALSE;
+		m_btnService.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_SERVICE_MENU ), 0 );
+
+		m_btnAdd.m_bDefaultClick = TRUE;
 		m_btnAdd.m_bOSMenu = FALSE;
-		SetMenuItemInfo( m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 ), 0, TRUE, &mi );
+		m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 );
+		SetMenuItemInfo( m_btnAdd.m_hMenu, 0, TRUE, &mi );
 	}
 
 	ReSize();
@@ -181,8 +191,6 @@ void CSearchManagerDlg::Disconnect()
 	m_pCatalog.Release();
 
 	UpdateInterface();
-
-	UpdateWindow();
 }
 
 void CSearchManagerDlg::UpdateInterface()
@@ -192,11 +200,20 @@ void CSearchManagerDlg::UpdateInterface()
 	const auto count = m_wndList.GetSelectedCount();
 	const BOOL bSingle = bScope && count == 1;
 	const BOOL bSelected = bScope && count > 0;
+	const BOOL bRunning = ( HasServiceState( INDEXER_SERVICE, SERVICE_RUNNING ) == ERROR_SUCCESS );
 
-	GetDlgItem( IDC_REINDEX )->EnableWindow( bCatalog );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_REINDEX_ALL, MF_BYCOMMAND | ( bCatalog ? MF_ENABLED : MF_GRAYED ) );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_RESET, MF_BYCOMMAND | ( bCatalog ? MF_ENABLED : MF_GRAYED ) );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_DEFAULT, MF_BYCOMMAND | ( bScope ? MF_ENABLED : MF_GRAYED ) );
+
+	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( bRunning ? MF_GRAYED : MF_ENABLED ) );
+	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_STOP, MF_BYCOMMAND | ( bRunning ? MF_ENABLED : MF_GRAYED ) );
+
 	GetDlgItem( IDC_ADD )->EnableWindow( bScope );
 	GetDlgItem( IDC_EDIT )->EnableWindow( bSingle );
 	GetDlgItem( IDC_DELETE )->EnableWindow( bSelected );
+
+	UpdateWindow();
 }
 
 void CSearchManagerDlg::SetStatus(const CString& sStatus)
@@ -212,8 +229,8 @@ void CSearchManagerDlg::SetIndex(const CString& sIndex)
 {
 	if ( m_sIndexCache != sIndex )
 	{
-		m_wndIndex.SetWindowText( m_sIndexCache = sIndex );
-		m_wndIndex.UpdateWindow();
+		m_wndLastIndexed.SetWindowText( m_sIndexCache = sIndex );
+		m_wndLastIndexed.UpdateWindow();
 	}
 }
 
@@ -245,11 +262,21 @@ BOOL CSearchManagerDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	UNUSED_ALWAYS( nRepCnt );
 	UNUSED_ALWAYS( nFlags );
 
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return FALSE;
+	}
+
 	const bool bControl = GetKeyState( VK_CONTROL ) < 0;
 	const bool bShift = GetKeyState( VK_SHIFT ) < 0;
 
 	switch ( nChar )
 	{
+	case VK_F5:
+		OnOK();
+		break;
+
 	case 'C':
 		if ( GetFocus() == static_cast< CWnd*>( &m_wndList ) )
 		{
@@ -315,11 +342,23 @@ void CSearchManagerDlg::OnLvnDeleteitemList(NMHDR *pNMHDR, LRESULT *pResult)
 
 void CSearchManagerDlg::OnBnClickedDelete()
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	Delete();
 }
 
-void CSearchManagerDlg::OnBnClickedReindex()
+void CSearchManagerDlg::OnBnClickedIndex()
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	switch ( m_btnReindex.m_nMenuResult )
 	{
 	case ID_REINDEX_ALL:
@@ -329,6 +368,10 @@ void CSearchManagerDlg::OnBnClickedReindex()
 
 	case ID_RESET:
 		Reset();
+		break;
+
+	case ID_REBUILD:
+		Rebuild();
 		break;
 
 	case ID_DEFAULT:
@@ -341,8 +384,35 @@ void CSearchManagerDlg::OnBnClickedReindex()
 	}
 }
 
+void CSearchManagerDlg::OnBnClickedService()
+{
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
+	switch ( m_btnService.m_nMenuResult )
+	{
+	case ID_SERVICE_START:
+	default:
+		StartWindowsSearch();
+		break;
+
+	case ID_SERVICE_STOP:
+		StopWindowsSearch();
+		break;
+	}
+}
+
 void CSearchManagerDlg::OnBnClickedAdd()
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	switch ( m_btnAdd.m_nMenuResult )
 	{
 	case ID_INCLUDE_USER_SCOPE:
@@ -399,6 +469,12 @@ void CSearchManagerDlg::OnBnClickedEdit()
 
 void CSearchManagerDlg::OnEdit(const CItem* item)
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	switch ( item->Group )
 	{
 	case GROUP_ROOTS:
@@ -473,6 +549,12 @@ void CSearchManagerDlg::OnCopy()
 
 void CSearchManagerDlg::OnDelete()
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	Delete();
 }
 
@@ -500,6 +582,12 @@ void CSearchManagerDlg::OnUpdateEdit(CCmdUI *pCmdUI)
 
 void CSearchManagerDlg::OnReindex()
 {
+	CLock locker( &m_bInUse );
+	if ( ! locker.Lock() )
+	{
+		return;
+	}
+
 	Reindex();
 }
 

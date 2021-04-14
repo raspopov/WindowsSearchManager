@@ -74,11 +74,29 @@ protected:
 
 extern CSearchManagerApp theApp;
 
-// Open registry key in 64-bit and 32-bit parts of the registry
+// Open registry key in 64-bit or 32-bit parts of the registry
 LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult);
 
-// Read registry key in 64-bit and 32-bit parts of the registry
+// Create registry key in 64-bit or 32-bit parts of the registry
+LSTATUS RegCreateKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult);
+
+// Read registry key in 64-bit or 32-bit parts of the registry
 LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
 
-// Read Windows Search protocol handler ProgID
+// Write registry key in 64-bit or 32-bit parts of the registry
+LSTATUS RegSetValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, DWORD dwType, const BYTE* lpData, DWORD cbData);
+
+// Get Windows Search protocol handler ProgID
 CString ProgIDFromProtocol(LPCTSTR szProtocol);
+
+// Get Windows Search directory
+CString GetSearchDirectory();
+
+// Disable and stop service
+DWORD StopService(LPCTSTR szService);
+
+// Enable and start service
+DWORD StartService(LPCTSTR szService);
+
+// Check service state
+DWORD HasServiceState(LPCTSTR szService, DWORD dwState);

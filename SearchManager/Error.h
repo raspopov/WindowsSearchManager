@@ -36,6 +36,7 @@ struct error_t
 		static LPCTSTR szModules [] =
 		{
 			_T("tquery.dll"),
+			_T("oledb32.dll"),
 			_T("lsasrv.dll"),
 			_T("user32.dll"),
 			_T("netmsg.dll"),

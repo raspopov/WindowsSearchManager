@@ -77,9 +77,10 @@ protected:
 	HICON			m_hIcon;
 	CStatic			m_wndStatus;
 	CStatic			m_wndName;
-	CStatic			m_wndIndex;
+	CStatic			m_wndLastIndexed;
 	CListCtrl		m_wndList;
 	CMFCMenuButton	m_btnReindex;
+	CMFCMenuButton	m_btnService;
 	CMFCMenuButton	m_btnAdd;
 
 	CString			m_sStatusCache;
@@ -154,11 +155,17 @@ protected:
 	// Reset whole index
 	void Reset();
 
+	// Rebuild whole index (removing folder)
+	void Rebuild();
+
 	// Reset to defaults (remove user scopes)
 	void Default();
 
 	// Run Explorer for index folder
 	void Explore();
+
+	bool StopWindowsSearch();
+	bool StartWindowsSearch();
 
 	void OnEdit(const CItem* item);
 
@@ -172,7 +179,8 @@ protected:
 	afx_msg void OnDestroy();
 	afx_msg void OnNMClickSysindex(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnLvnDeleteitemList( NMHDR *pNMHDR, LRESULT *pResult );
-	afx_msg void OnBnClickedReindex();
+	afx_msg void OnBnClickedIndex();
+	afx_msg void OnBnClickedService();
 	afx_msg void OnBnClickedAdd();
 	afx_msg void OnBnClickedDelete();
 	afx_msg void OnLvnItemchangedList(NMHDR *pNMHDR, LRESULT *pResult);

@@ -1,7 +1,7 @@
 /*
 This file is part of Search Manager - shows Windows Search internals.
 
-Copyright (C) 2012-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 https://github.com/raspopov/WindowsSearchManager
 
@@ -21,4 +21,5 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#define _WIN32_WINNT 0x0501	// for Windows XP
 #include <SDKDDKVer.h>

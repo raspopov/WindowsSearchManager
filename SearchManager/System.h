@@ -1,31 +1,57 @@
+/*
+This file is part of Search Manager - shows Windows Search internals.
+
+Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
+
+https://github.com/raspopov/WindowsSearchManager
+
+This program is free software : you can redistribute it and / or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+( at your option ) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.If not, see < http://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 
 // Class to login as process
 
-class CAsProcess
+#define TRUSTED_INSTALLER_PROCESS	_T("TrustedInstaller.exe")
+#define TRUSTED_INSTALLER_SERVICE	_T("TrustedInstaller")
+
+class CAsProcess : public CAccessToken
 {
 public:
 	CAsProcess(DWORD dwProcessID) noexcept
-		: hProcess	( nullptr )
-		, hToken	( nullptr )
-		, bResult	( false )
 	{
-		if ( oToken.GetProcessToken( TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY ) )
+		if ( Access.GetProcessToken( TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY ) )
 		{
 			// For process enumeration
-			if ( ! oToken.EnablePrivilege( SE_DEBUG_NAME ) )
+			if ( ! Access.EnablePrivilege( SE_DEBUG_NAME ) )
 			{
 				TRACE( _T("EnablePrivilege(SE_DEBUG_NAME) error: %d\n"), GetLastError() );
 			}
 
 			// For token access under Win2K/WinXP
-			if ( ! oToken.EnablePrivilege( SE_TAKE_OWNERSHIP_NAME ) )
+			if ( ! Access.EnablePrivilege( SE_TAKE_OWNERSHIP_NAME ) )
 			{
 				TRACE( _T("EnablePrivilege(SE_TAKE_OWNERSHIP_NAME) error: %d\n"), GetLastError() );
 			}
-			if ( ! oToken.EnablePrivilege( SE_SECURITY_NAME ) )
+			if ( ! Access.EnablePrivilege( SE_SECURITY_NAME ) )
 			{
 				TRACE( _T("EnablePrivilege(SE_SECURITY_NAME) error: %d\n"), GetLastError() );
+			}
+
+			if ( ! Access.EnablePrivilege( SE_IMPERSONATE_NAME ) )
+			{
+				TRACE( _T("EnablePrivilege(SE_IMPERSONATE_NAME) error: %d\n"), GetLastError() );
 			}
 		}
 		else
@@ -34,30 +60,20 @@ public:
 		}
 
 		// Open process to steal its token
-		hProcess = OpenProcess( PROCESS_QUERY_INFORMATION, FALSE, dwProcessID );
-		if ( hProcess )
+		Process.Attach( OpenProcess( PROCESS_QUERY_INFORMATION, FALSE, dwProcessID ) );
+		if ( Process )
 		{
 			// Need a token with impersonation rights
-			hToken = OpenProcessToken( hProcess, TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE );
-			if ( hToken )
+			Attach( OpenProcessToken( Process, TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE ) );
+			if ( m_hToken )
 			{
-				// Login
-				if ( ImpersonateLoggedOnUser( hToken ) )
-				{
-					bResult = true;
-					return;
-				}
-				else
-				{
-					TRACE( _T("ImpersonateLoggedOnUser error: %u\n"), GetLastError() );
-				}
-				CloseHandle( hToken );
+				// OK
 			}
 			else
 			{
 				TRACE( _T("OpenProcessToken error: %u\n"), GetLastError() );
+				Process.Close();
 			}
-			CloseHandle( hProcess );
 		}
 		else
 		{
@@ -67,24 +83,87 @@ public:
 
 	inline operator bool() const noexcept
 	{
-		return bResult;
+		return ( m_hToken != nullptr );
 	}
 
-	~CAsProcess() noexcept
+	static CAsProcess* RunAsTrustedInstaller()
 	{
-		if ( bResult )
+		// At start System privilege needed
+		CAutoPtr< CAsProcess > process( RunAsSystem() );
+		if ( process )
 		{
-			RevertToSelf();
+			// Try to start TrustedInstaller service
+			if ( SC_HANDLE scm = OpenSCManager( nullptr, nullptr, SC_MANAGER_CONNECT ) )
+			{
+				if ( SC_HANDLE service = OpenService( scm, TRUSTED_INSTALLER_SERVICE, SERVICE_START | SERVICE_QUERY_STATUS ) )
+				{
+					// Try to start service for 10 seconds
+					for ( int i = 0; i < 40; ++i )
+					{
+						SERVICE_STATUS status = {};
+						if ( ! QueryServiceStatus( service, &status ) )
+						{
+							break;
+						}
+						if ( status.dwCurrentState == SERVICE_RUNNING )
+						{
+							break;
+						}
+						if ( ! StartService( service, 0, nullptr ) )
+						{
+							break;
+						}
+						SleepEx( 250 , FALSE );
+					}
+					CloseServiceHandle( service );
+				}
+				CloseServiceHandle( scm );
+			}
 
-			CloseHandle( hToken );
-			CloseHandle( hProcess );
+			// Looking for trusted installer process
+			CAutoPtr< CAsProcess > trusted( RunAs( TRUSTED_INSTALLER_PROCESS ) );
+			if ( trusted )
+			{
+				if ( trusted->ImpersonateLoggedOnUser() )
+				{
+					TRACE( _T("Impersonated as: %s\n"), TRUSTED_INSTALLER_PROCESS );
+
+					process = trusted;
+				}
+				else
+				{
+					trusted.Free();
+				}
+			}
+
+			// Re-impersonate
+			process->Revert();
+			VERIFY( process->ImpersonateLoggedOnUser() );
+
+			return process.Detach();
 		}
+
+		return nullptr;
 	}
 
 	static CAsProcess* RunAsSystem()
 	{
-		const static LPCTSTR victims[] = { _T("lsass.exe"),  _T("winlogon.exe"), _T("smss.exe"), _T("csrss.exe"), _T("services.exe") };
+		// Looking for system processes
+		const static LPCTSTR victims[] = { _T("lsass.exe"),  _T("winlogon.exe") };
+		for ( auto victim : victims )
+		{
+			CAutoPtr< CAsProcess > process( RunAs( victim ) );
+			if ( process && process->ImpersonateLoggedOnUser() )
+			{
+				TRACE( _T("Impersonated as: %s\n"), victim );
+				return process.Detach();
+			}
+		}
+		return nullptr;
+	}
 
+	static CAsProcess* RunAs(LPCTSTR target)
+	{
 		// Enumerate all processes
 		PROCESSENTRY32 pe32 = { sizeof( PROCESSENTRY32 ) };
 		HANDLE hProcessSnap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
@@ -98,21 +177,18 @@ public:
 					if ( pe32.th32ProcessID )
 					{
 						LPCTSTR name = PathFindFileName( pe32.szExeFile );
-
-						// Looking for victims
-						for ( auto victim : victims )
+						if ( _tcsicmp( target, name ) == 0 )
 						{
-							if ( _tcsicmp( victim, name ) == 0 )
+							CAutoPtr< CAsProcess > process( new CAsProcess( pe32.th32ProcessID ) );
+							if ( *process )
 							{
-								CAutoPtr< CAsProcess > process( new CAsProcess( pe32.th32ProcessID ) );
-								if ( *process )
-								{
-									TRACE( _T("Run as process: %s (PID: %d)\n"), name, pe32.th32ProcessID );
-									CloseHandle( hProcessSnap );
-									return process.Detach();
-								}
-
-								TRACE( _T("Skipped process: %s (PID: %d)\n"), name, pe32.th32ProcessID );
+								TRACE( _T("Got process: %s (PID: %d)\n"), name, pe32.th32ProcessID );
+								CloseHandle( hProcessSnap );
+								return process.Detach();
+							}
+							else
+							{
+								TRACE( _T("Failed to get process: %s (PID: %d)\n"), name, pe32.th32ProcessID );
 							}
 						}
 					}
@@ -123,22 +199,18 @@ public:
 			{
 				TRACE( _T("Process32First error: %u\n"), GetLastError() );
 			}
-
 			CloseHandle( hProcessSnap );
 		}
 		else
 		{
 			TRACE( _T("CreateToolhelp32Snapshot(Process) error: %u\n"), GetLastError() );
 		}
-
 		return nullptr;
 	}
 
 private:
-	CAccessToken oToken;
-	HANDLE hProcess;
-	HANDLE hToken;
-	bool bResult;
+	CAccessToken	Access;		// Own process token
+	CHandle			Process;	// Target process handler
 
 	static HANDLE OpenProcessToken(HANDLE hProcess, DWORD dwAccess)
 	{
@@ -193,7 +265,7 @@ private:
 								// Reopen it
 								if ( DuplicateHandle( hSelfProcess, hToken, hSelfProcess, &hToken, dwAccess, FALSE, DUPLICATE_CLOSE_SOURCE ) )
 								{
-									TRACE( _T("Got it!\n") );
+									// OK
 								}
 								else
 								{

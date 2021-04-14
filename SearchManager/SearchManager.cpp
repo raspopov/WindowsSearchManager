@@ -105,6 +105,20 @@ LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phk
 	return res;
 }
 
+LSTATUS RegCreateKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult)
+{
+	LSTATUS res = RegCreateKeyEx( hKey, lpSubKey, 0, nullptr, 0, samDesired | KEY_WOW64_64KEY, nullptr, phkResult, nullptr );
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegCreateKeyEx( hKey, lpSubKey, 0, nullptr, 0, samDesired | KEY_WOW64_32KEY, nullptr, phkResult, nullptr );
+	}
+	if ( res != ERROR_SUCCESS )
+	{
+		res = RegCreateKeyEx( hKey, lpSubKey, 0, nullptr, 0, samDesired, nullptr, phkResult, nullptr );
+	}
+	return res;
+}
+
 LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
 {
 	HKEY hValueKey;
@@ -112,6 +126,18 @@ LSTATUS RegQueryValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, LPDWORD 
 	if ( res == ERROR_SUCCESS )
 	{
 		res = RegQueryValueEx( hValueKey, lpValue, nullptr, lpType, lpData, lpcbData );
+		RegCloseKey( hValueKey );
+	}
+	return res;
+}
+
+LSTATUS RegSetValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, DWORD dwType, const BYTE* lpData, DWORD cbData)
+{
+	HKEY hValueKey;
+	LSTATUS res = RegOpenKeyFull( hKey, lpSubKey, KEY_SET_VALUE, &hValueKey );
+	if ( res == ERROR_SUCCESS )
+	{
+		res = RegSetValueEx( hValueKey, lpValue, 0, dwType, lpData, cbData );
 		RegCloseKey( hValueKey );
 	}
 	return res;
@@ -137,4 +163,168 @@ CString ProgIDFromProtocol(LPCTSTR szProtocol)
 	}
 
 	return CString();
+}
+
+CString GetSearchDirectory()
+{
+	TCHAR folder[ MAX_PATH ] = {};
+	DWORD type, folder_size = sizeof( folder );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		TCHAR expanded[ MAX_PATH ] = {};
+		if ( ExpandEnvironmentStrings( folder, expanded, MAX_PATH ) )
+		{
+			return expanded;
+		}
+
+		return folder;
+	}
+
+	return CString();
+}
+
+DWORD StopService(LPCTSTR szService)
+{
+	// Read-only access
+	DWORD res = HasServiceState( szService, SERVICE_STOPPED );
+
+	// Full access
+	if ( res != ERROR_SUCCESS )
+	{
+		if ( SC_HANDLE scm = OpenSCManager( nullptr, nullptr, SC_MANAGER_ALL_ACCESS ) )
+		{
+			if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_STOP | SERVICE_QUERY_STATUS | SERVICE_CHANGE_CONFIG ) )
+			{
+				if ( ChangeServiceConfig( service, SERVICE_NO_CHANGE, SERVICE_DISABLED, SERVICE_NO_CHANGE,
+					nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr ) )
+				{
+					// Try to stop service for 10 seconds
+					res = ERROR_TIMEOUT;
+					for ( int i = 0; i < 40; ++i )
+					{
+						SERVICE_STATUS status = {};
+						if ( ! QueryServiceStatus( service, &status ) )
+						{
+							res = GetLastError();
+							break;
+						}
+						if ( status.dwCurrentState == SERVICE_STOPPED )
+						{
+							res = ERROR_SUCCESS;
+							break;
+						}
+						if ( ! ControlService( service, SERVICE_CONTROL_STOP, &status ) )
+						{
+							res = GetLastError();
+						}
+						SleepEx( 250 , FALSE );
+					}
+				}
+				else
+				{
+					res = GetLastError();
+				}
+				CloseServiceHandle( service );
+			}
+			else
+			{
+				res = GetLastError();
+			}
+			CloseServiceHandle( scm );
+		}
+		else
+		{
+			res = GetLastError();
+		}
+	}
+	return res;
+}
+
+DWORD StartService(LPCTSTR szService)
+{
+	// Read-only access
+	DWORD res = HasServiceState( szService, SERVICE_RUNNING );
+
+	// Full access
+	if ( res != ERROR_SUCCESS )
+	{
+		if ( SC_HANDLE scm = OpenSCManager( nullptr, nullptr, SC_MANAGER_ALL_ACCESS ) )
+		{
+			if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_START | SERVICE_QUERY_STATUS | SERVICE_CHANGE_CONFIG ) )
+			{
+				if ( ChangeServiceConfig( service, SERVICE_NO_CHANGE, SERVICE_AUTO_START, SERVICE_NO_CHANGE,
+					nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr ) )
+				{
+					// Try to start service for 10 seconds
+					res = ERROR_TIMEOUT;
+					for ( int i = 0; i < 40; ++i )
+					{
+						SERVICE_STATUS status = {};
+						if ( ! QueryServiceStatus( service, &status ) )
+						{
+							res = GetLastError();
+							break;
+						}
+						if ( status.dwCurrentState == SERVICE_RUNNING )
+						{
+							res = ERROR_SUCCESS;
+							break;
+						}
+						if ( ! StartService( service, 0, nullptr ) )
+						{
+							res = GetLastError();
+						}
+						SleepEx( 250 , FALSE );
+					}
+				}
+				else
+				{
+					res = GetLastError();
+				}
+				CloseServiceHandle( service );
+			}
+			else
+			{
+				res = GetLastError();
+			}
+			CloseServiceHandle( scm );
+		}
+		else
+		{
+			res = GetLastError();
+		}
+	}
+	return res;
+}
+
+DWORD HasServiceState(LPCTSTR szService, DWORD dwState)
+{
+	DWORD res = ERROR_SUCCESS;
+	if ( SC_HANDLE scm = OpenSCManager( nullptr, nullptr, SC_MANAGER_CONNECT ) )
+	{
+		if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_QUERY_STATUS ) )
+		{
+			SERVICE_STATUS status = {};
+			if ( QueryServiceStatus( service, &status ) )
+			{
+				res = ( status.dwCurrentState == dwState ) ? ERROR_SUCCESS : ERROR_INVALID_DATA;
+			}
+			else
+			{
+				res = GetLastError();
+			}
+			CloseServiceHandle( service );
+		}
+		else
+		{
+			res = GetLastError();
+		}
+		CloseServiceHandle( scm );
+	}
+	else
+	{
+		res = GetLastError();
+	}
+	return res;
 }

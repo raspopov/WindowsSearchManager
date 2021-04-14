@@ -57,7 +57,7 @@ int CSearchManagerDlg::GetGroupId(UINT nID, REFGUID guid)
 	}
 
 	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
-		const_cast< LPTSTR >( static_cast< LPCTSTR >( name ) ), 0, nullptr, 0, m_wndList.GetGroupCount() };
+		const_cast< LPTSTR >( static_cast< LPCTSTR >( name ) ), 0, nullptr, 0, static_cast< int >( m_Groups.GetCount() ) };
 	VERIFY( m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots ) != -1 );
 	m_Groups.SetAt( name, grpRoots.iGroupId );
 	return grpRoots.iGroupId;
@@ -94,19 +94,10 @@ void CSearchManagerDlg::Refresh()
 
 		Clear();
 
+		SetIndex( _T("") );
+
 		// Release old connection
-		if ( m_pCatalog )
-		{
-			SetStatus( IDS_DISCONNECTING );
-			SetIndex( _T("") );
-
-			Disconnect();
-
-			SleepEx( 500, FALSE );
-		}
-
-		// Try to get System privileges
-		CAutoPtr< CAsProcess >sys( CAsProcess::RunAsSystem() );
+		Disconnect();
 
 		// Create a new connection
 		SetStatus( IDS_CONNECTING );
@@ -140,12 +131,19 @@ void CSearchManagerDlg::Refresh()
 			}
 		}
 
-		if ( sys )
+		// Enumerate offline roots and scopes
 		{
-			EnumerateRegistryRoots();
+			// Try to get System privileges
+			CAutoPtr< CAsProcess >sys( CAsProcess::RunAsSystem() );
+			if ( sys )
+			{
+				EnumerateRegistryRoots();
 
-			EnumerateRegistryDefaultRules();
+				EnumerateRegistryDefaultRules();
+			}
 		}
+
+		RevertToSelf();
 
 		m_wndList.SortItemsEx( &CSearchManagerDlg::SortProc, reinterpret_cast< LPARAM >( this ) );
 
@@ -154,8 +152,6 @@ void CSearchManagerDlg::Refresh()
 		if ( SUCCEEDED( hr ) )
 		{
 			UpdateInterface();
-
-			UpdateWindow();
 		}
 		else
 		{
@@ -239,10 +235,7 @@ void CSearchManagerDlg::Refresh()
 			const error_t result( hr );
 			SetStatus( result.msg + CRLF CRLF + result.error );
 
-			if ( FAILED( hr ) )
-			{
-				Disconnect();
-			}
+			Disconnect();
 		}
 	}
 
@@ -265,6 +258,8 @@ void CSearchManagerDlg::Refresh()
 
 HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 {
+	TRACE( _T("EnumerateRoots\n") );
+
 	HRESULT hr = S_OK;
 
 	CComPtr< IEnumSearchRoots > pRoots;
@@ -294,6 +289,8 @@ HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 
 HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 {
+	TRACE( _T("EnumerateScopeRules\n") );
+
 	HRESULT hr = S_OK;
 
 	CComPtr< IEnumSearchScopeRules > pRules;
@@ -323,6 +320,8 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 
 void CSearchManagerDlg::EnumerateRegistryRoots()
 {
+	TRACE( _T("EnumerateRegistryRoots\n") );
+
 	HKEY hRootsKey;
 	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_ROOTS, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
 	if ( res == ERROR_SUCCESS )
@@ -365,6 +364,8 @@ void CSearchManagerDlg::EnumerateRegistryRoots()
 
 void CSearchManagerDlg::EnumerateRegistryDefaultRules()
 {
+	TRACE( _T("EnumerateRegistryDefaultRules\n") );
+
 	HKEY hRootsKey;
 	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
 	if ( res == ERROR_SUCCESS )

@@ -48,6 +48,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <sddl.h>
 #include <aclapi.h>
 #include <tlhelp32.h>
+#include <winsvc.h>
 
 #include <atlsecurity.h>
 
@@ -57,9 +58,6 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <afxmenubutton.h>
 #include <afxvisualmanagerwindows.h>
 #include <afxeditbrowsectrl.h>
-
-#include <ntquery.h>
-#pragma comment( lib,"ntquery.lib" )
 
 #ifdef _UNICODE
 #if defined _M_IX86

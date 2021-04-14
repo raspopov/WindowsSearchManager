@@ -312,6 +312,7 @@ HRESULT CRoot::Reindex(ISearchCatalogManager* pCatalog) const
 
 COfflineRoot::COfflineRoot(const CString& key, group_t group)
 	: CRoot		( group )
+	, Key		( key )
 {
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -328,6 +329,11 @@ COfflineRoot::COfflineRoot(const CString& key, group_t group)
 
 		ParseURL( true );
 	}
+}
+
+HRESULT COfflineRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
+{
+	return CRoot::DeleteFrom( pScope );
 }
 
 // CRule
@@ -413,6 +419,7 @@ HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
 
 CDefaultRule::CDefaultRule(const CString& key, group_t group)
 	: CRule	( group )
+	, Key	( key )
 {
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -435,4 +442,9 @@ CDefaultRule::CDefaultRule(const CString& key, group_t group)
 
 		ParseURL( true );
 	}
+}
+
+HRESULT CDefaultRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
+{
+	return CRule::DeleteFrom( pScope );
 }
