@@ -94,7 +94,8 @@ protected:
 	CList< CItem* >	m_List;
 	CMap< CString, LPCTSTR, int, int > m_Groups;
 
-	int GetGroupId(UINT nID, REFGUID guid);
+	// Get list group by name and GUID creating a new one if missed
+	int GetGroupId(const CString& name, REFGUID guid);
 
 	// Update interface items
 	void UpdateInterface();
@@ -124,17 +125,10 @@ protected:
 
 	// Enumerate search scope rules from the registry
 	void EnumerateRegistryDefaultRules();
+	void EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName);
 
-	inline void SetStatus(UINT nStatus)
-	{
-		SetStatus( LoadString( nStatus ) );
-	}
 	void SetStatus(const CString& sStatus);
 
-	inline void SetIndex(UINT nIndex)
-	{
-		SetIndex( LoadString( nIndex ) );
-	}
 	void SetIndex(const CString& sIndex);
 
 	// Add new or edit existing search root
@@ -159,7 +153,10 @@ protected:
 	void Rebuild();
 
 	// Reset to defaults (remove user scopes)
-	void Default();
+	void Default(bool bInteractive);
+
+	// Index defragmentation
+	void Defrag();
 
 	// Run Explorer for index folder
 	void Explore();

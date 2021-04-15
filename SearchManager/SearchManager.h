@@ -55,10 +55,11 @@ inline CString StringFromGUID(REFGUID guid)
 
 #define KEY_SEARCH			_T("SOFTWARE\\Microsoft\\Windows Search")
 #define KEY_PROTOCOLS		KEY_SEARCH _T("\\Gather\\Windows\\SystemIndex\\Protocols")
-#define KEY_ROOTS			KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
+#define KEY_SEARCH_ROOTS	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
 #define KEY_DEFAULT_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\DefaultRules")
 #define KEY_WORKING_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\WorkingSetRules")
 
+#define VALUE_ITEM_COUNT	_T("ItemCount")
 
 class CSearchManagerApp : public CWinAppEx
 {
@@ -100,3 +101,6 @@ DWORD StartService(LPCTSTR szService);
 
 // Check service state
 DWORD HasServiceState(LPCTSTR szService, DWORD dwState);
+
+// Renumber registry keys
+LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey);

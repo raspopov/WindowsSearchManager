@@ -172,6 +172,8 @@ CString GetSearchDirectory()
 	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size );
 	if ( res == ERROR_SUCCESS )
 	{
+		PathAddBackslash( folder );
+
 		TCHAR expanded[ MAX_PATH ] = {};
 		if ( ExpandEnvironmentStrings( folder, expanded, MAX_PATH ) )
 		{
@@ -326,5 +328,119 @@ DWORD HasServiceState(LPCTSTR szService, DWORD dwState)
 	{
 		res = GetLastError();
 	}
+	return res;
+}
+
+LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey)
+{
+	HKEY hRootsKey;
+	LSTATUS res = RegOpenKeyFull( hKey, lpSubKey, KEY_ALL_ACCESS, &hRootsKey );
+	if ( res == ERROR_SUCCESS )
+	{
+		DWORD count = 0;
+		DWORD type, count_size = sizeof( DWORD );
+		res = RegQueryValueEx( hRootsKey, lpNumberKey, nullptr, &type, reinterpret_cast< LPBYTE >( &count ), &count_size );
+		if ( res == ERROR_SUCCESS && type == REG_DWORD )
+		{
+			TRACE( _T("Read count value %s: %u\n"), lpSubKey, count );
+
+			std::set< DWORD > keys;
+
+			TCHAR name[ MAX_PATH ] = {};
+			for ( DWORD i = 0; ; ++i )
+			{
+				name[ 0 ] = 0;
+				DWORD name_size = _countof( name );
+				res = SHEnumKeyEx( hRootsKey, i, name, &name_size );
+				if ( res != ERROR_SUCCESS )
+				{
+					res = ERROR_SUCCESS;
+					break;
+				}
+
+				const DWORD number = static_cast< DWORD >( _tstol( name ) );
+				if ( errno != 0 || number > 1000 )
+				{
+					TRACE( _T("Abort. Found non-number key: %s\n"), name );
+					res = ERROR_INVALID_DATA;
+					break;
+				}
+
+				if ( keys.find( number ) != keys.end() )
+				{
+					TRACE( _T("Abort. Found duplicate key: %s\n"), name );
+					res = ERROR_INVALID_DATA;
+					break;
+				}
+
+				keys.insert( number );
+			}
+
+			if ( res == ERROR_SUCCESS )
+			{
+				TRACE( _T("Actual count value: %u\n"), keys.size() );
+
+				DWORD number = 0;
+				for ( auto i = keys.begin(); i != keys.end() && res == ERROR_SUCCESS; ++i, ++number )
+				{
+					if ( number != *i )
+					{
+						CString old_key;
+						old_key.Format( _T("%u"), *i );
+
+						CString new_key;
+						new_key.Format( _T("%u"), number );
+
+						TRACE( _T("Renaming: %s -> %s\n"), (LPCTSTR)old_key, (LPCTSTR)new_key );
+
+						HKEY hNewKey;
+						res = RegCreateKeyFull( hRootsKey, new_key, KEY_ALL_ACCESS, &hNewKey );
+						if ( res == ERROR_SUCCESS )
+						{
+							res = SHCopyKey( hRootsKey, old_key, hNewKey, 0 );
+							if ( res == ERROR_SUCCESS )
+							{
+								res = SHDeleteKey( hRootsKey, old_key );
+								if ( res != ERROR_SUCCESS )
+								{
+									TRACE( _T("Failed to delete key: %d\n"), (LPCTSTR)old_key, res );
+								}
+							}
+							else
+							{
+								TRACE( _T("Failed to copy key: %d\n"), (LPCTSTR)old_key, res );
+							}
+							RegCloseKey( hNewKey );
+						}
+						else
+						{
+							TRACE( _T("Failed to open key: %d\n"), res );
+						}
+					}
+				}
+
+				if ( res == ERROR_SUCCESS && count != number )
+				{
+					TRACE( _T("Setting new count: %u -> %u\n"), count, number );
+
+					res = RegSetValueEx( hRootsKey, lpNumberKey, 0, REG_DWORD, reinterpret_cast< const BYTE* >( &number ), sizeof( DWORD ) );
+					if ( res != ERROR_SUCCESS )
+					{
+						TRACE( _T("Failed to set count value %s: %d\n"), lpSubKey, res );
+					}
+				}
+			}
+		}
+		else
+		{
+			TRACE( _T("Failed to read count value %s: %d\n"), lpSubKey, res );
+		}
+		RegCloseKey( hRootsKey );
+	}
+	else
+	{
+		TRACE( _T("Failed to open key %s: %d\n"), lpSubKey, res );
+	}
+
 	return res;
 }

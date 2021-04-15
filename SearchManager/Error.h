@@ -31,7 +31,7 @@ struct error_t
 		return msg + _T(' ') + error;
 	}
 
-	error_t(HRESULT hr = GetLastError())
+	error_t(HRESULT hr = HRESULT_FROM_WIN32( GetLastError() ))
 	{
 		static LPCTSTR szModules [] =
 		{
@@ -86,15 +86,17 @@ struct error_t
 			if ( hr == E_ACCESSDENIED )
 			{
 				// Administrative privileges required
-				msg += _T(" ");
-				msg += LoadString( IDS_ADMIN );
+				const static CString admin = _T(" ") + LoadString( IDS_ADMIN );
+				msg += admin;
 			}
 		}
 		else
 		{
-			msg = LoadString( IDS_UNKNOWN_ERROR );
+			const static CString unknown = LoadString( IDS_UNKNOWN_ERROR );
+			msg = unknown;
 		}
 
-		error.Format( IDS_ERROR_CODE, hr );
+		const static CString code = LoadString( IDS_ERROR_CODE );
+		error.Format( code, hr );
 	}
 };

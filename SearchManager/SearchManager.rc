@@ -280,6 +280,8 @@ BEGIN
         MENUITEM "Rebuild...",                  ID_REBUILD
         MENUITEM "Default...",                  ID_DEFAULT
         MENUITEM SEPARATOR
+        MENUITEM "Defrag...",                   ID_DEFRAG
+        MENUITEM SEPARATOR
         MENUITEM "Explore",                     ID_EXPLORE
     END
 END
@@ -310,7 +312,7 @@ BEGIN
     IDS_DELETING            "Deleting..."
     IDS_CONNECTING          "Connecting to Windows Search™..."
     IDS_DELETE_CONFIRM      "Are you about to delete %u selected item(s) from the index?"
-    IDS_GETTING_CATALOG     "Getting catalog..."
+    IDS_DEFRAG_CONFIRM      "Are you about to defragment the indexer database on the disk by using Windows utility ""esentutl.exe""?"
     IDS_STATUS_1            "Index is current; no indexing needed. Queries can be processed."
     IDS_STATUS_2            "Indexer is paused. This can happen either because the user paused indexing or the indexer back-off criteria have been met. Queries can be processed."
     IDS_STATUS_3            "Index is recovering; queries and indexing are processed while in this state."
@@ -324,7 +326,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_ENUMERATING         "Enumerating roots and scope rules..."
+    IDS_INDEXER_DEFRAG      "Defragmenting Windows Search database..."
     IDS_ROOTS               "Search roots"
     IDS_RULES               "Search scope rules"
     IDS_ADD_SCOPE           "Search scope rule (%s, %s)"

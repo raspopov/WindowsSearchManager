@@ -312,7 +312,7 @@ HRESULT CRoot::Reindex(ISearchCatalogManager* pCatalog) const
 
 COfflineRoot::COfflineRoot(const CString& key, group_t group)
 	: CRoot		( group )
-	, Key		( key )
+	, Key		( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -333,7 +333,22 @@ COfflineRoot::COfflineRoot(const CString& key, group_t group)
 
 HRESULT COfflineRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	return CRoot::DeleteFrom( pScope );
+	if ( pScope )
+	{
+		// Delete root
+		return CRoot::DeleteFrom( pScope );
+	}
+
+	ASSERT( ! IsEqualGUID( Guid, GUID() ) );
+	ASSERT( ! Key.IsEmpty() );
+
+	// Delete from registry
+	LSTATUS res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_SEARCH_ROOTS ) + _T("\\") + Key );
+	if ( res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+	{
+		res = ERROR_SUCCESS;
+	}
+	return HRESULT_FROM_WIN32( res );
 }
 
 // CRule
@@ -417,9 +432,9 @@ HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
 
 // CDefaultRule
 
-CDefaultRule::CDefaultRule(const CString& key, group_t group)
+COfflineRule::COfflineRule(const CString& key, group_t group)
 	: CRule	( group )
-	, Key	( key )
+	, Key	( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -444,7 +459,25 @@ CDefaultRule::CDefaultRule(const CString& key, group_t group)
 	}
 }
 
-HRESULT CDefaultRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
+HRESULT COfflineRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	return CRule::DeleteFrom( pScope );
+	if ( pScope )
+	{
+		// Delete from scope
+		return CRule::DeleteFrom( pScope );
+	}
+
+	ASSERT( ! Key.IsEmpty() );
+
+	// Delete from registry
+	LSTATUS res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_DEFAULT_RULES ) + _T("\\") + Key );
+	if ( res == ERROR_SUCCESS || res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+	{
+		res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_WORKING_RULES ) + _T("\\") + Key );
+		if ( res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+		{
+			res = ERROR_SUCCESS;
+		}
+	}
+	return HRESULT_FROM_WIN32( res );
 }

@@ -8,9 +8,9 @@
 #define IDS_CONNECTING                  132
 #define IDS_DELETE_CONFIRM              133
 #define IDR_ADD_MENU                    133
-#define IDS_GETTING_CATALOG             134
 #define IDD_URL_DIALOG                  134
 #define IDR_LIST_MENU                   134
+#define IDS_DEFRAG_CONFIRM              134
 #define IDS_STATUS_1                    135
 #define IDS_STATUS_2                    136
 #define IDS_STATUS_3                    137
@@ -22,7 +22,7 @@
 #define IDS_STATUS_7                    141
 #define IDS_CLOSED                      142
 #define IDS_ADMIN                       143
-#define IDS_ENUMERATING                 144
+#define IDS_INDEXER_DEFRAG              144
 #define IDS_ROOTS                       146
 #define IDS_RULES                       147
 #define IDS_ADD_SCOPE                   148
@@ -84,13 +84,14 @@
 #define ID_0_STARTWINDOWSSEARCHSERVICE  32792
 #define ID_SERVICE_START                32793
 #define ID_SERVICE_STOP                 32794
+#define ID_DEFRAG                       32795
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        139
-#define _APS_NEXT_COMMAND_VALUE         32795
+#define _APS_NEXT_COMMAND_VALUE         32796
 #define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

@@ -131,11 +131,6 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sUR
 
 void CSearchManagerDlg::Delete()
 {
-	if ( ! m_pScope )
-	{
-		return;
-	}
-
 	// Enumerate items to delete
 	CList< const CItem* > to_delete;
 	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
@@ -154,51 +149,152 @@ void CSearchManagerDlg::Delete()
 		msg.Format( IDS_DELETE_CONFIRM, to_delete.GetCount() );
 		if ( AfxMessageBox( msg, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
-			SetStatus( IDS_DELETING );
+			const static CString deleting = LoadString( IDS_DELETING );
+			SetStatus( deleting );
 
+			// Step 1 - Delete from Windows Search
 			for ( POSITION pos = to_delete.GetHeadPosition(); pos; )
 			{
-				const POSITION prev = pos;
+				POSITION current_pos = pos;
 				auto item = to_delete.GetNext( pos );
 
-				CWaitCursor wc;
-
-				// Delete from WS
-				HRESULT hr = item->DeleteFrom( m_pScope );
-				if ( SUCCEEDED( hr ) )
+				if ( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS )
 				{
-					const HRESULT hr_save = m_pScope->SaveAll();
-					if ( hr == S_OK || FAILED( hr_save ) )
+					// Try step 1 first but else skip to step 2
+					if ( m_pScope )
 					{
-						hr = hr_save;
+						HRESULT hr = item->DeleteFrom( m_pScope );
+						if ( SUCCEEDED( hr ) )
+						{
+							hr = m_pScope->SaveAll();
+							if ( SUCCEEDED( hr ) )
+							{
+								to_delete.RemoveAt( current_pos );
+								m_bRefresh = true;
+							}
+						}
 					}
 				}
-
-				if ( hr == S_OK )
+				else if ( ! m_pScope )
 				{
-					m_bRefresh = true;
+					// Cancel deletion
+					pos = nullptr;
+					to_delete.RemoveAll();
+					AfxMessageBox( LoadString( IDS_CLOSED ), MB_OK | MB_ICONHAND );
+					break;
 				}
 				else
 				{
-					const error_t result( hr );
-					const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
-						MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
-					if ( res == IDRETRY )
+					to_delete.RemoveAt( current_pos );
+					for (;;)
 					{
-						// Retry deletion
-						pos = prev;
-						continue;
+						CWaitCursor wc;
+						HRESULT hr = item->DeleteFrom( m_pScope );
+						if ( SUCCEEDED( hr ) )
+						{
+							const HRESULT hr_save = m_pScope->SaveAll();
+							if ( hr == S_OK || FAILED( hr_save ) )
+							{
+								hr = hr_save;
+							}
+						}
+
+						if ( hr == S_OK )
+						{
+							m_bRefresh = true;
+							break;
+						}
+						else
+						{
+							const error_t result( hr );
+							const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
+								MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
+							if ( res == IDRETRY )
+							{
+								// Retry deletion
+								continue;
+							}
+							else if ( res == IDIGNORE )
+							{
+								// Ignore error and continue deletion
+								break;
+							}
+							else
+							{
+								// Cancel deletion
+								pos = nullptr;
+								to_delete.RemoveAll();
+								break;
+							}
+						}
 					}
-					else if ( res == IDIGNORE )
+				}
+			}
+
+			// Step 2 - Delete from registry
+			if ( to_delete.GetCount() )
+			{
+				if ( StopWindowsSearch() )
+				{
+					SetStatus( deleting );
+
 					{
-						// Ignore error and continue deletion
-						continue;
+						// Try to get System privileges
+						CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
+
+						for ( POSITION pos = to_delete.GetHeadPosition(); pos; )
+						{
+							auto item = to_delete.GetNext( pos );
+
+							ASSERT( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS );
+
+							for (;;)
+							{
+								CWaitCursor wc;
+
+								HRESULT hr = item->DeleteFrom( nullptr );
+								if ( SUCCEEDED( hr ) )
+								{
+									break;
+								}
+								else
+								{
+									const error_t result( hr );
+									const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
+										MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
+									if ( res == IDRETRY )
+									{
+										// Retry deletion
+										continue;
+									}
+									else if ( res == IDIGNORE )
+									{
+										// Ignore error and continue deletion
+										break;
+									}
+									else
+									{
+										// Cancel deletion
+										pos = nullptr;
+										to_delete.RemoveAll();
+										break;
+									}
+								}
+							}
+						}
 					}
-					else
-					{
-						// Cancel deletion
-						break;
-					}
+
+					// Re-number keys
+					RegRenumberKeys( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, VALUE_ITEM_COUNT );
+					RegRenumberKeys( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, VALUE_ITEM_COUNT );
+					RegRenumberKeys( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, VALUE_ITEM_COUNT );
+
+					VERIFY( RevertToSelf() );
+
+					StartWindowsSearch();
+
+					// Update catalog
+					Default( false );
 				}
 			}
 		}
@@ -213,7 +309,6 @@ void CSearchManagerDlg::Reindex()
 	}
 
 	// Enumerate items to re-index
-	CList< const CItem* > to_delete;
 	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 	{
 		const POSITION prev = pos;
@@ -249,14 +344,20 @@ void CSearchManagerDlg::Reindex()
 
 void CSearchManagerDlg::ReindexAll()
 {
-	if ( ! m_pCatalog )
-	{
-		return;
-	}
-
 	if ( AfxMessageBox( IDS_REINDEX_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 	{
-		const HRESULT hr = m_pCatalog->Reindex();
+		CComPtr< ISearchManager > pManager;
+		HRESULT hr = pManager.CoCreateInstance( __uuidof( CSearchManager ) );
+		if ( SUCCEEDED( hr ) )
+		{
+			// Get catalog
+			CComPtr< ISearchCatalogManager > pCatalog;
+			hr = pManager->GetCatalog( CATALOG_NAME, &pCatalog );
+			if ( SUCCEEDED( hr ) )
+			{
+				hr = pCatalog->Reindex();
+			}
+		}
 
 		const error_t result( hr );
 		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
@@ -267,14 +368,20 @@ void CSearchManagerDlg::ReindexAll()
 
 void CSearchManagerDlg::Reset()
 {
-	if ( ! m_pCatalog )
-	{
-		return;
-	}
-
 	if ( AfxMessageBox( IDS_RESET_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 	{
-		const HRESULT hr = m_pCatalog->Reset();
+		CComPtr< ISearchManager > pManager;
+		HRESULT hr = pManager.CoCreateInstance( __uuidof( CSearchManager ) );
+		if ( SUCCEEDED( hr ) )
+		{
+			// Get catalog
+			CComPtr< ISearchCatalogManager > pCatalog;
+			hr = pManager->GetCatalog( CATALOG_NAME, &pCatalog );
+			if ( SUCCEEDED( hr ) )
+			{
+				hr = pCatalog->Reset();
+			}
+		}
 
 		const error_t result( hr );
 		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
@@ -292,14 +399,16 @@ void CSearchManagerDlg::Rebuild()
 		{
 			if ( StopWindowsSearch() )
 			{
+				// Delete Windows Search directory
+				const static CString status = LoadString( IDS_INDEXER_DELETING );
+				SetStatus( status );
+
 				{
 					CWaitCursor wc;
 
 					// Try to get System privileges
 					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
-					// Delete Windows Search directory
-					SetStatus( IDS_INDEXER_DELETING );
 					folder.AppendChar( 0 ); // double null terminated for SHFileOperation
 					SHFILEOPSTRUCT fop = { GetSafeHwnd(), FO_DELETE, (LPCTSTR)folder, nullptr, FOF_ALLOWUNDO | FOF_NOCONFIRMATION };
 					if ( GetFileAttributes( folder ) == INVALID_FILE_ATTRIBUTES || SHFileOperation( &fop ) == 0 )
@@ -314,9 +423,9 @@ void CSearchManagerDlg::Rebuild()
 							AfxMessageBox( LoadString( IDS_INDEXER_REG_ERROR ) + _T("\n\n") + error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
 						}
 					}
-
-					RevertToSelf();
 				}
+
+				VERIFY( RevertToSelf() );
 
 				StartWindowsSearch();
 			}
@@ -324,27 +433,100 @@ void CSearchManagerDlg::Rebuild()
 	}
 }
 
-void CSearchManagerDlg::Default()
+void CSearchManagerDlg::Defrag()
 {
-	if ( ! m_pScope )
-	{
-		return;
-	}
+	CString system_dir;
+	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
+	system_dir.ReleaseBuffer();
 
-	if ( AfxMessageBox( IDS_DEFAULT_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+	CString folder = GetSearchDirectory();
+	if ( ! folder.IsEmpty() )
 	{
-		HRESULT hr = m_pScope->RevertToDefaultScopes();
+		if ( AfxMessageBox( IDS_DEFRAG_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+		{
+			if ( StopWindowsSearch() )
+			{
+				// Start defragmentation
+				const static CString status = LoadString( IDS_INDEXER_DEFRAG );
+				SetStatus( status );
+
+				{
+					CWaitCursor wc;
+
+					// Try to get System privileges
+					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
+
+					const CString cmd = system_dir + _T("\\cmd.exe");
+					const CString params = _T("/c ") + system_dir + _T("\\esentutl.exe /d \"") + folder + _T("Applications\\Windows\\Windows.edb\" /o && pause");
+
+					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC, GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
+					if ( ShellExecuteEx( &sei ) && sei.hProcess )
+					{
+						// Wait for termination
+						do
+						{
+							MSG msg;
+							while ( PeekMessage( &msg, NULL, NULL, NULL, PM_REMOVE ) )
+							{
+								TranslateMessage( &msg );
+								DispatchMessage( &msg );
+							}
+						}
+						while ( MsgWaitForMultipleObjects( 1, &sei.hProcess, FALSE, INFINITE, QS_ALLEVENTS ) == WAIT_OBJECT_0 + 1 );
+
+						CloseHandle( sei.hProcess );
+					}
+					else
+					{
+						const error_t error;
+						AfxMessageBox( error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+					}
+				}
+
+				VERIFY( RevertToSelf() );
+
+				StartWindowsSearch();
+			}
+		}
+	}
+}
+
+void CSearchManagerDlg::Default(bool bInteractive)
+{
+	if ( ! bInteractive || AfxMessageBox( IDS_DEFAULT_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+	{
+		CComPtr< ISearchManager > pManager;
+		HRESULT hr = pManager.CoCreateInstance( __uuidof( CSearchManager ) );
 		if ( SUCCEEDED( hr ) )
 		{
-			const HRESULT hr_save = m_pScope->SaveAll();
-			if ( hr == S_OK || FAILED( hr_save ) )
+			// Get catalog
+			CComPtr< ISearchCatalogManager > pCatalog;
+			hr = pManager->GetCatalog( CATALOG_NAME, &pCatalog );
+			if ( SUCCEEDED( hr ) )
 			{
-				hr = hr_save;
+				// Get scope
+				CComPtr< ISearchCrawlScopeManager >	pScope;
+				hr = pCatalog->GetCrawlScopeManager( &pScope );
+				if ( SUCCEEDED( hr ) )
+				{
+					hr = pScope->RevertToDefaultScopes();
+					if ( SUCCEEDED( hr ) )
+					{
+						const HRESULT hr_save = pScope->SaveAll();
+						if ( hr == S_OK || FAILED( hr_save ) )
+						{
+							hr = hr_save;
+						}
+					}
+				}
 			}
 		}
 
-		const error_t result( hr );
-		AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
+		if ( bInteractive )
+		{
+			const error_t result( hr );
+			AfxMessageBox( result.msg + _T("\n\n") + result.error, MB_OK | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONERROR ) );
+		}
 
 		m_bRefresh = true;
 	}
@@ -352,16 +534,28 @@ void CSearchManagerDlg::Default()
 
 void CSearchManagerDlg::Explore()
 {
-	CWaitCursor wc;
+	CString system_dir;
+	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
+	system_dir.ReleaseBuffer();
 
 	const CString folder = GetSearchDirectory();
 	if ( ! folder.IsEmpty() )
 	{
-		const CString params = CString( _T("/k cd /d \"") ) + folder + _T("Applications\\Windows\\\" && dir");
-		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, _T("cmd.exe"), params, nullptr, SW_SHOWDEFAULT };
-		VERIFY( ShellExecuteEx( &sei ) );
+		CWaitCursor wc;
 
-		SleepEx( 500, FALSE );
+		const CString cmd = system_dir + _T("\\cmd.exe");
+		const CString params = CString( _T("/k cd /d \"") ) + folder + _T("Applications\\Windows\\\" && dir");
+
+		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
+		if ( ShellExecuteEx( &sei ) )
+		{
+			SleepEx( 500, FALSE );
+		}
+		else
+		{
+			const error_t error;
+			AfxMessageBox( error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+		}
 	}
 }
 
@@ -369,11 +563,10 @@ bool CSearchManagerDlg::StopWindowsSearch()
 {
 	CWaitCursor wc;
 
-	Clear();
-
 	Disconnect();
 
-	SetStatus( IDS_INDEXER_STOPPING );
+	const static CString status = LoadString( IDS_INDEXER_STOPPING );
+	SetStatus( status );
 
 	m_bRefresh = true;
 
@@ -394,7 +587,8 @@ bool CSearchManagerDlg::StartWindowsSearch()
 {
 	CWaitCursor wc;
 
-	SetStatus( IDS_INDEXER_STARTING );
+	const static CString status = LoadString( IDS_INDEXER_STARTING );
+	SetStatus( status );
 
 	m_bRefresh = true;
 

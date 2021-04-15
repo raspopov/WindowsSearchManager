@@ -21,7 +21,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-enum group_t { GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_DEFAULT_RULES };
+enum group_t { GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_OFFLINE_RULES };
 
 class CItem
 {
@@ -104,10 +104,10 @@ public:
 	BOOL HasChild;				// Identifies whether a given URL has a child rule in scope
 };
 
-class CDefaultRule : public CRule
+class COfflineRule : public CRule
 {
 public:
-	CDefaultRule(const CString& key, group_t group = GROUP_DEFAULT_RULES);
+	COfflineRule(const CString& key, group_t group = GROUP_OFFLINE_RULES);
 
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
 

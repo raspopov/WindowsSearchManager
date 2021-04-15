@@ -41,25 +41,27 @@ int CALLBACK CSearchManagerDlg::SortProc(LPARAM lParam1, LPARAM lParam2, LPARAM 
     return item1->URL.CompareNoCase( item2->URL );
 }
 
-int CSearchManagerDlg::GetGroupId(UINT nID, REFGUID guid)
+int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 {
-	CString name = LoadString( nID );
+	CString key = name;
 	if ( ! IsEqualGUID( guid, GUID() ) )
 	{
-		name += _T(' ');
-		name += StringFromGUID( guid );
+		key += _T(' ');
+		key += StringFromGUID( guid );
 	}
 
 	int value;
-	if ( m_Groups.Lookup( name, value ) )
+	if ( m_Groups.Lookup( key, value ) )
 	{
 		return value;
 	}
 
 	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
-		const_cast< LPTSTR >( static_cast< LPCTSTR >( name ) ), 0, nullptr, 0, static_cast< int >( m_Groups.GetCount() ) };
+		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.GetCount() ) };
 	VERIFY( m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots ) != -1 );
-	m_Groups.SetAt( name, grpRoots.iGroupId );
+
+	m_Groups.SetAt( key, grpRoots.iGroupId );
+
 	return grpRoots.iGroupId;
 }
 
@@ -100,7 +102,8 @@ void CSearchManagerDlg::Refresh()
 		Disconnect();
 
 		// Create a new connection
-		SetStatus( IDS_CONNECTING );
+		const static CString connecting = LoadString( IDS_CONNECTING );
+		SetStatus( connecting );
 		CComPtr< ISearchManager > pManager;
 		hr = pManager.CoCreateInstance( __uuidof( CSearchManager ) );
 		if ( SUCCEEDED( hr ) )
@@ -115,12 +118,10 @@ void CSearchManagerDlg::Refresh()
 			}
 
 			// Get catalog
-			SetStatus( IDS_GETTING_CATALOG );
 			hr = pManager->GetCatalog( CATALOG_NAME, &m_pCatalog );
 			if ( SUCCEEDED( hr ) )
 			{
 				// Get scope
-				SetStatus( IDS_ENUMERATING );
 				hr = m_pCatalog->GetCrawlScopeManager( &m_pScope );
 				if ( SUCCEEDED( hr ) )
 				{
@@ -134,7 +135,7 @@ void CSearchManagerDlg::Refresh()
 		// Enumerate offline roots and scopes
 		{
 			// Try to get System privileges
-			CAutoPtr< CAsProcess >sys( CAsProcess::RunAsSystem() );
+			CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 			if ( sys )
 			{
 				EnumerateRegistryRoots();
@@ -143,11 +144,12 @@ void CSearchManagerDlg::Refresh()
 			}
 		}
 
-		RevertToSelf();
+		VERIFY( RevertToSelf() );
 
 		m_wndList.SortItemsEx( &CSearchManagerDlg::SortProc, reinterpret_cast< LPARAM >( this ) );
 
-		SetWindowText( LoadString( AFX_IDS_APP_TITLE ) + _T(" - Indexer version: ") + sVersion );
+		const static CString title = LoadString( AFX_IDS_APP_TITLE ) + _T(" - Indexer version: ");
+		SetWindowText( title + sVersion );
 
 		if ( SUCCEEDED( hr ) )
 		{
@@ -157,8 +159,9 @@ void CSearchManagerDlg::Refresh()
 		{
 			SleepEx( 500, FALSE );
 
+			const static CString closed = LoadString( IDS_CLOSED );
 			const error_t result( hr );
-			SetStatus( result.msg + CRLF CRLF + result.error + CRLF CRLF + LoadString( IDS_CLOSED ) );
+			SetStatus( result.msg + CRLF CRLF + result.error + CRLF CRLF + closed );
 
 			Disconnect();
 		}
@@ -212,15 +215,38 @@ void CSearchManagerDlg::Refresh()
 			{
 				if ( status >= CATALOG_STATUS_IDLE && status <= CATALOG_STATUS_SHUTTING_DOWN )
 				{
+					const static CString statuses[ CATALOG_STATUS_SHUTTING_DOWN + 1 ] =
+					{
+						LoadString( IDS_STATUS_1 ),
+						LoadString( IDS_STATUS_2 ),
+						LoadString( IDS_STATUS_3 ),
+						LoadString( IDS_STATUS_4 ),
+						LoadString( IDS_STATUS_5 ),
+						LoadString( IDS_STATUS_6 ),
+						LoadString( IDS_STATUS_7 )
+					};
 					sStatus += CRLF;
-					sStatus += LoadString( IDS_STATUS_1 + static_cast< int >( status ) );
+					sStatus += statuses[ static_cast< int >( status ) ];
 				}
 				if ( status == CATALOG_STATUS_PAUSED )
 				{
 					if ( reason > CATALOG_PAUSED_REASON_NONE && reason <= CATALOG_PAUSED_REASON_UPGRADING )
 					{
+						const static CString reasons[ CATALOG_PAUSED_REASON_UPGRADING ] =
+						{
+							LoadString( IDS_REASON_1 ),
+							LoadString( IDS_REASON_2 ),
+							LoadString( IDS_REASON_3 ),
+							LoadString( IDS_REASON_4 ),
+							LoadString( IDS_REASON_5 ),
+							LoadString( IDS_REASON_6 ),
+							LoadString( IDS_REASON_7 ),
+							LoadString( IDS_REASON_8 ),
+							LoadString( IDS_REASON_9 ),
+							LoadString( IDS_REASON_10 )
+						};
 						sStatus += CRLF CRLF;
-						sStatus += LoadString( IDS_REASON_1 + static_cast< int >( reason ) - 1 );
+						sStatus += reasons[ static_cast< int >( reason ) - 1 ];
 					}
 				}
 			}
@@ -278,7 +304,8 @@ HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 			CAutoPtr< CRoot > root( new CRoot( pScope, pRoot ) );
 			if ( *root )
 			{
-				VERIFY( root->InsertTo( m_wndList, GetGroupId( IDS_ROOTS, root->Guid ) ) != -1 );
+				const static CString group_name = LoadString( IDS_ROOTS );
+				VERIFY( root->InsertTo( m_wndList, GetGroupId( group_name, root->Guid ) ) != -1 );
 				m_List.AddTail( root.Detach() );
 			}
 		}
@@ -309,7 +336,8 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 			CAutoPtr< CRule > rule( new CRule( pScope, pRule ) );
 			if ( *rule )
 			{
-				VERIFY( rule->InsertTo( m_wndList, GetGroupId( IDS_RULES, rule->Guid ) ) != -1 );
+				const static CString group_name = LoadString( IDS_RULES );
+				VERIFY( rule->InsertTo( m_wndList, GetGroupId( group_name, rule->Guid ) ) != -1 );
 				m_List.AddTail( rule.Detach() );
 			}
 		}
@@ -320,54 +348,23 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 
 void CSearchManagerDlg::EnumerateRegistryRoots()
 {
-	TRACE( _T("EnumerateRegistryRoots\n") );
-
-	HKEY hRootsKey;
-	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_ROOTS, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
-	if ( res == ERROR_SUCCESS )
-	{
-		TCHAR name[ MAX_PATH ] = {};
-		for ( DWORD i = 0; ; ++i )
-		{
-			name[ 0 ] = 0;
-			DWORD name_size = _countof( name );
-			res = SHEnumKeyEx( hRootsKey, i, name, &name_size );
-			if ( res != ERROR_SUCCESS )
-			{
-				break;
-			}
-
-			CAutoPtr< COfflineRoot > root( new COfflineRoot( CString( KEY_ROOTS ) + _T('\\') + name ) );
-			if ( *root )
-			{
-				bool found = false;
-				for ( POSITION pos = m_List.GetHeadPosition(); pos; )
-				{
-					auto item = m_List.GetNext( pos );
-					if ( item->Group == GROUP_ROOTS && *item == *root )
-					{
-						found = true;
-						break;
-					}
-				}
-
-				if ( ! found )
-				{
-					VERIFY( root->InsertTo( m_wndList, GetGroupId( IDS_DEFAULT_ROOTS, root->Guid ) ) != -1 );
-					m_List.AddTail( root.Detach() );
-				}
-			}
-		}
-		RegCloseKey( hRootsKey );
-	}
+	const static CString group_name = LoadString( IDS_DEFAULT_ROOTS );
+	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, GROUP_ROOTS, group_name );
 }
 
 void CSearchManagerDlg::EnumerateRegistryDefaultRules()
 {
-	TRACE( _T("EnumerateRegistryDefaultRules\n") );
+	const static CString group_name = LoadString( IDS_DEFAULT_RULES );
+	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, GROUP_RULES, group_name );
+	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
+}
+
+void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName)
+{
+	TRACE( _T("EnumerateRegistry: %s\n"), szSubkey );
 
 	HKEY hRootsKey;
-	LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
+	LSTATUS res = RegOpenKeyFull( hKey, szSubkey, KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hRootsKey );
 	if ( res == ERROR_SUCCESS )
 	{
 		TCHAR name[ MAX_PATH ] = {};
@@ -381,14 +378,20 @@ void CSearchManagerDlg::EnumerateRegistryDefaultRules()
 				break;
 			}
 
-			CAutoPtr< CDefaultRule > rule( new CDefaultRule( CString( KEY_DEFAULT_RULES ) + _T('\\') + name ) );
+			CString url = CString( szSubkey ) + _T('\\') + name;
+
+			CAutoPtr< CItem > rule( ( nGroup == GROUP_RULES ) ?
+				static_cast< CItem* >( new COfflineRule( url ) ) :
+				static_cast< CItem* >( new COfflineRoot( url ) ) );
 			if ( *rule )
 			{
 				bool found = false;
 				for ( POSITION pos = m_List.GetHeadPosition(); pos; )
 				{
-					auto item = m_List.GetNext( pos );
-					if ( item->Group == GROUP_RULES && *item == *rule )
+					const auto item = m_List.GetNext( pos );
+					if ( ( item->Group == nGroup || ( ( nGroup == GROUP_RULES ) ?
+						 ( item->Group == GROUP_OFFLINE_RULES ) : ( item->Group == GROUP_OFFLINE_ROOTS ) ) ) &&
+						*item == *rule )
 					{
 						found = true;
 						break;
@@ -397,7 +400,7 @@ void CSearchManagerDlg::EnumerateRegistryDefaultRules()
 
 				if ( ! found )
 				{
-					VERIFY( rule->InsertTo( m_wndList, GetGroupId( IDS_DEFAULT_RULES, rule->Guid ) ) != -1 );
+					VERIFY( rule->InsertTo( m_wndList, GetGroupId( sGroupName, rule->Guid ) ) != -1 );
 					m_List.AddTail( rule.Detach() );
 				}
 			}

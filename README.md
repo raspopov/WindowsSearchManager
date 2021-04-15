@@ -5,16 +5,24 @@
 
 # Windows Search™ Manager
 
-Utility to manage a Windows Search™ internals.
+Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Search) internals.
 
 ![Windows Search™ Manager](https://raw.githubusercontent.com/raspopov/WindowsSearchManager/main/SearchManager-main.png)
 
 ## Features
 
-- Fine tuning of indexer locations (add, edit, delete).
-- Bulk operations.
-- Direct control of Windows Search™ engine.
-- Nifty context menu.
+- Fine tuning of indexed locations (add, edit, delete) including deleting of orphan ones (on unavailable disks)
+- Bulk operations
+- Direct control of Windows Search™ engine
+- Database defragmentation (Windows.edb file)
+- Nifty context menu
+
+### Hotkeys
+
+- F5, ENTER - Refresh location list
+- Ctrl+C, Ctrl+Insert - Copy location to clipboard
+- Insert - Add new location
+- Delete - Delete existing location
 
 ## System Requirements
 

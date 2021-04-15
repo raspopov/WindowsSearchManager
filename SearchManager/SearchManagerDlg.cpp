@@ -132,7 +132,7 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	UpdateInterface();
 
-	SetTimer( 1, 200, nullptr );
+	SetTimer( 1, 250, nullptr );
 
 	return TRUE;
 }
@@ -195,23 +195,16 @@ void CSearchManagerDlg::Disconnect()
 
 void CSearchManagerDlg::UpdateInterface()
 {
-	const BOOL bCatalog = static_cast< bool >( m_pCatalog );
 	const BOOL bScope = static_cast< bool >( m_pScope );
 	const auto count = m_wndList.GetSelectedCount();
-	const BOOL bSingle = bScope && count == 1;
-	const BOOL bSelected = bScope && count > 0;
 	const BOOL bRunning = ( HasServiceState( INDEXER_SERVICE, SERVICE_RUNNING ) == ERROR_SUCCESS );
-
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_REINDEX_ALL, MF_BYCOMMAND | ( bCatalog ? MF_ENABLED : MF_GRAYED ) );
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_RESET, MF_BYCOMMAND | ( bCatalog ? MF_ENABLED : MF_GRAYED ) );
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_DEFAULT, MF_BYCOMMAND | ( bScope ? MF_ENABLED : MF_GRAYED ) );
 
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( bRunning ? MF_GRAYED : MF_ENABLED ) );
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_STOP, MF_BYCOMMAND | ( bRunning ? MF_ENABLED : MF_GRAYED ) );
 
 	GetDlgItem( IDC_ADD )->EnableWindow( bScope );
-	GetDlgItem( IDC_EDIT )->EnableWindow( bSingle );
-	GetDlgItem( IDC_DELETE )->EnableWindow( bSelected );
+	GetDlgItem( IDC_EDIT )->EnableWindow( bScope && count == 1 );
+	GetDlgItem( IDC_DELETE )->EnableWindow( count > 0 );
 
 	UpdateWindow();
 }
@@ -234,20 +227,28 @@ void CSearchManagerDlg::SetIndex(const CString& sIndex)
 	}
 }
 
-void CSearchManagerDlg::OnNMClickSysindex(NMHDR * /*pNMHDR*/, LRESULT *pResult)
+void CSearchManagerDlg::OnNMClickSysindex(NMHDR* pNMHDR, LRESULT *pResult)
 {
+	UNUSED_ALWAYS( pNMHDR );
+
 	CWaitCursor wc;
 
-	CString sSys;
-	GetSystemWindowsDirectory( sSys.GetBuffer( MAX_PATH ), MAX_PATH );
-	sSys.ReleaseBuffer();
-	sSys += _T("\\system32\\");
+	CString system_dir;
+	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
+	system_dir.ReleaseBuffer();
 
-	const CString sControl = sSys + _T("rundll32.exe");
-	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, sControl, _T("shell32.dll,Control_RunDLL srchadmin.dll"), sSys, SW_SHOWDEFAULT };
-	VERIFY( ShellExecuteEx( &sei ) );
+	const CString cmd = system_dir + _T("\\rundll32.exe");
 
-	SleepEx( 500, FALSE );
+	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd, _T("shell32.dll,Control_RunDLL srchadmin.dll"), system_dir, SW_SHOWNORMAL };
+	if ( ShellExecuteEx( &sei ) )
+	{
+		SleepEx( 500, FALSE );
+	}
+	else
+	{
+		const error_t error;
+		AfxMessageBox( error.msg + _T("\n\n") + error.error, MB_OK | MB_ICONHAND );
+	}
 
 	*pResult = 0;
 }
@@ -342,13 +343,7 @@ void CSearchManagerDlg::OnLvnDeleteitemList(NMHDR *pNMHDR, LRESULT *pResult)
 
 void CSearchManagerDlg::OnBnClickedDelete()
 {
-	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() )
-	{
-		return;
-	}
-
-	Delete();
+	OnDelete();
 }
 
 void CSearchManagerDlg::OnBnClickedIndex()
@@ -375,7 +370,11 @@ void CSearchManagerDlg::OnBnClickedIndex()
 		break;
 
 	case ID_DEFAULT:
-		Default();
+		Default( true );
+		break;
+
+	case ID_DEFRAG:
+		Defrag();
 		break;
 
 	case ID_EXPLORE:
@@ -483,7 +482,7 @@ void CSearchManagerDlg::OnEdit(const CItem* item)
 		break;
 
 	case GROUP_RULES:
-	case GROUP_DEFAULT_RULES:
+	case GROUP_OFFLINE_RULES:
 		AddRule( static_cast< const CRule* >( item )->IsInclude, static_cast< const CRule* >( item )->IsDefault, item->URL );
 		break;
 	}
@@ -611,7 +610,7 @@ void CSearchManagerDlg::OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult)
 	case CDDS_ITEMPREPAINT:
 		if ( auto item = reinterpret_cast< const CItem* >( pNMCD->nmcd.lItemlParam ) )
 		{
-			if ( item->Group == GROUP_RULES || item->Group == GROUP_DEFAULT_RULES )
+			if ( item->Group == GROUP_RULES || item->Group == GROUP_OFFLINE_RULES )
 			{
 				pNMCD->clrTextBk = static_cast< const CRule* >( item )->IsInclude ? RGB( 192, 255, 192 ) : RGB( 255, 192, 192 );
 			}
