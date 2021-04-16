@@ -1,7 +1,7 @@
 /*
 This file is part of Search Manager - shows Windows Search internals.
 
-Copyright (C) 2012-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 https://github.com/raspopov/WindowsSearchManager
 
@@ -40,15 +40,19 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include "targetver.h"
 
 #include <afxwin.h>
-#include <afxext.h>
-#include <afxcmn.h>
 
 #include <searchapi.h>
 #include <shlobj.h>
-#include <sddl.h>
-#include <aclapi.h>
 #include <tlhelp32.h>
 #include <winsvc.h>
+
+#define SECURITY_WIN32
+#include <security.h>
+#pragma comment(lib, "secur32.lib")
+
+#include <lmaccess.h>
+#include <lmapibuf.h>
+#pragma comment(lib, "netapi32.lib")
 
 #include <atlsecurity.h>
 
@@ -60,6 +64,9 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <afxeditbrowsectrl.h>
 
 #include <set>
+#include <vector>
+#include <list>
+#include <map>
 
 #ifdef _UNICODE
 #if defined _M_IX86

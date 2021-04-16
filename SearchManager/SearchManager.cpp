@@ -403,18 +403,18 @@ LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey)
 								res = SHDeleteKey( hRootsKey, old_key );
 								if ( res != ERROR_SUCCESS )
 								{
-									TRACE( _T("Failed to delete key: %d\n"), (LPCTSTR)old_key, res );
+									TRACE( _T("Failed to delete key \"%s\": %s\n"), (LPCTSTR)old_key, GetErrorEx( res ) );
 								}
 							}
 							else
 							{
-								TRACE( _T("Failed to copy key: %d\n"), (LPCTSTR)old_key, res );
+								TRACE( _T("Failed to copy key \"%s\": %s\n"), (LPCTSTR)old_key, GetErrorEx( res ) );
 							}
 							RegCloseKey( hNewKey );
 						}
 						else
 						{
-							TRACE( _T("Failed to open key: %d\n"), res );
+							TRACE( _T("Failed to open key: %s\n"), GetErrorEx( res ) );
 						}
 					}
 				}
@@ -426,20 +426,20 @@ LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey)
 					res = RegSetValueEx( hRootsKey, lpNumberKey, 0, REG_DWORD, reinterpret_cast< const BYTE* >( &number ), sizeof( DWORD ) );
 					if ( res != ERROR_SUCCESS )
 					{
-						TRACE( _T("Failed to set count value %s: %d\n"), lpSubKey, res );
+						TRACE( _T("Failed to set count value \"%s\": %s\n"), lpSubKey, GetErrorEx( res ) );
 					}
 				}
 			}
 		}
 		else
 		{
-			TRACE( _T("Failed to read count value %s: %d\n"), lpSubKey, res );
+			TRACE( _T("Failed to read count value \"%s\": %s\n"), lpSubKey, GetErrorEx( res ) );
 		}
 		RegCloseKey( hRootsKey );
 	}
 	else
 	{
-		TRACE( _T("Failed to open key %s: %d\n"), lpSubKey, res );
+		TRACE( _T("Failed to open key \"%s\": %s\n"), lpSubKey, GetErrorEx( res ) );
 	}
 
 	return res;

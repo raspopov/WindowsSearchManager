@@ -50,17 +50,17 @@ int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 		key += StringFromGUID( guid );
 	}
 
-	int value;
-	if ( m_Groups.Lookup( key, value ) )
+	const auto group = m_Groups.find( key );
+	if ( group != m_Groups.end() )
 	{
-		return value;
+		return group->second;
 	}
 
 	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
-		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.GetCount() ) };
+		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.size() ) };
 	VERIFY( m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots ) != -1 );
 
-	m_Groups.SetAt( key, grpRoots.iGroupId );
+	m_Groups.insert( std::make_pair( key, grpRoots.iGroupId ) );
 
 	return grpRoots.iGroupId;
 }
@@ -68,10 +68,13 @@ int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 void CSearchManagerDlg::Clear()
 {
 	VERIFY( m_wndList.DeleteAllItems() );
-	m_List.RemoveAll();
+	m_List.clear();
 
 	m_wndList.RemoveAllGroups();
-	m_Groups.RemoveAll();
+	m_Groups.clear();
+
+	m_sUserAgent.Empty();
+	m_sVersion.Empty();
 }
 
 void CSearchManagerDlg::Refresh()
@@ -92,8 +95,6 @@ void CSearchManagerDlg::Refresh()
 
 		CWaitCursor wc;
 
-		CString sVersion = _T("Unknown");
-
 		Clear();
 
 		SetIndex( _T("") );
@@ -113,8 +114,16 @@ void CSearchManagerDlg::Refresh()
 			hr = pManager->GetIndexerVersionStr( &szVersion );
 			if ( SUCCEEDED( hr ) )
 			{
-				sVersion = szVersion;
+				m_sVersion = szVersion;
 				CoTaskMemFree( szVersion );
+			}
+
+			LPWSTR szUserAgent = nullptr;
+			hr = pManager->get_UserAgent( &szUserAgent );
+			if ( SUCCEEDED( hr ) )
+			{
+				m_sUserAgent = szUserAgent;
+				CoTaskMemFree( szUserAgent );
 			}
 
 			// Get catalog
@@ -148,9 +157,6 @@ void CSearchManagerDlg::Refresh()
 
 		m_wndList.SortItemsEx( &CSearchManagerDlg::SortProc, reinterpret_cast< LPARAM >( this ) );
 
-		const static CString title = LoadString( AFX_IDS_APP_TITLE ) + _T(" - Indexer version: ");
-		SetWindowText( title + sVersion );
-
 		if ( SUCCEEDED( hr ) )
 		{
 			UpdateInterface();
@@ -169,26 +175,23 @@ void CSearchManagerDlg::Refresh()
 
 	CString sStatus;
 
+	if ( ! m_sUserAgent.IsEmpty() )
+	{
+		sStatus += _T("User agent\t\t: ") + m_sUserAgent + CRLF;
+	}
+
+	if ( ! m_sVersion.IsEmpty() )
+	{
+		sStatus += _T("Indexer version\t\t: ") + m_sVersion + CRLF;
+	}
+
 	if ( m_pCatalog )
 	{
 		LONG numitems = 0;
 		hr = m_pCatalog->NumberOfItems( &numitems );
 		if ( SUCCEEDED( hr ) )
 		{
-			sStatus.AppendFormat( _T("Total items      \t\t: %ld") CRLF, numitems );
-
-			DWORD timeout = 0;
-			hr = m_pCatalog->get_ConnectTimeout( &timeout );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Connect timeout     \t: %lu s") CRLF, timeout );
-			}
-
-			hr = m_pCatalog->get_DataTimeout( &timeout );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Data timeout        \t: %lu s") CRLF, timeout );
-			}
+			sStatus.AppendFormat( _T("Total items\t\t: %ld") CRLF, numitems );
 
 			BOOL diacritic = FALSE;
 			hr = m_pCatalog->get_DiacriticSensitivity( &diacritic );
@@ -202,7 +205,7 @@ void CSearchManagerDlg::Refresh()
 			if ( SUCCEEDED( hr ) )
 			{
 				sStatus.AppendFormat(
-					_T("Pending queue      \t: %ld") CRLF
+					_T("Pending queue\t\t: %ld") CRLF
 					_T("Notification queue \t: %ld") CRLF
 					_T("High priority queue\t: %ld") CRLF,
 					pendingitems, queued, highpri );
@@ -306,7 +309,7 @@ HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 			{
 				const static CString group_name = LoadString( IDS_ROOTS );
 				VERIFY( root->InsertTo( m_wndList, GetGroupId( group_name, root->Guid ) ) != -1 );
-				m_List.AddTail( root.Detach() );
+				m_List.push_back( root.Detach() );
 			}
 		}
 	}
@@ -338,7 +341,7 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 			{
 				const static CString group_name = LoadString( IDS_RULES );
 				VERIFY( rule->InsertTo( m_wndList, GetGroupId( group_name, rule->Guid ) ) != -1 );
-				m_List.AddTail( rule.Detach() );
+				m_List.push_back( rule.Detach() );
 			}
 		}
 	}
@@ -386,9 +389,8 @@ void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t n
 			if ( *rule )
 			{
 				bool found = false;
-				for ( POSITION pos = m_List.GetHeadPosition(); pos; )
+				for ( const auto item : m_List )
 				{
-					const auto item = m_List.GetNext( pos );
 					if ( ( item->Group == nGroup || ( ( nGroup == GROUP_RULES ) ?
 						 ( item->Group == GROUP_OFFLINE_RULES ) : ( item->Group == GROUP_OFFLINE_ROOTS ) ) ) &&
 						*item == *rule )
@@ -401,7 +403,7 @@ void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t n
 				if ( ! found )
 				{
 					VERIFY( rule->InsertTo( m_wndList, GetGroupId( sGroupName, rule->Guid ) ) != -1 );
-					m_List.AddTail( rule.Detach() );
+					m_List.push_back( rule.Detach() );
 				}
 			}
 		}

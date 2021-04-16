@@ -21,6 +21,8 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "Error.h"
+
 // Class to login as process
 
 #define TRUSTED_INSTALLER_PROCESS	_T("TrustedInstaller.exe")
@@ -36,27 +38,27 @@ public:
 			// For process enumeration
 			if ( ! Access.EnablePrivilege( SE_DEBUG_NAME ) )
 			{
-				TRACE( _T("EnablePrivilege(SE_DEBUG_NAME) error: %d\n"), GetLastError() );
+				TRACE( _T("EnablePrivilege(SE_DEBUG_NAME) error: %s\n"), GetError() );
 			}
 
 			// For token access under Win2K/WinXP
 			if ( ! Access.EnablePrivilege( SE_TAKE_OWNERSHIP_NAME ) )
 			{
-				TRACE( _T("EnablePrivilege(SE_TAKE_OWNERSHIP_NAME) error: %d\n"), GetLastError() );
+				TRACE( _T("EnablePrivilege(SE_TAKE_OWNERSHIP_NAME) error: %s\n"), GetError() );
 			}
 			if ( ! Access.EnablePrivilege( SE_SECURITY_NAME ) )
 			{
-				TRACE( _T("EnablePrivilege(SE_SECURITY_NAME) error: %d\n"), GetLastError() );
+				TRACE( _T("EnablePrivilege(SE_SECURITY_NAME) error: %s\n"), GetError() );
 			}
 
 			if ( ! Access.EnablePrivilege( SE_IMPERSONATE_NAME ) )
 			{
-				TRACE( _T("EnablePrivilege(SE_IMPERSONATE_NAME) error: %d\n"), GetLastError() );
+				TRACE( _T("EnablePrivilege(SE_IMPERSONATE_NAME) error: %s\n"), GetError() );
 			}
 		}
 		else
 		{
-			TRACE( _T("GetProcessToken error: %d\n"), GetLastError() );
+			TRACE( _T("GetProcessToken error: %s\n"), GetError() );
 		}
 
 		// Open process to steal its token
@@ -71,13 +73,13 @@ public:
 			}
 			else
 			{
-				TRACE( _T("OpenProcessToken error: %u\n"), GetLastError() );
+				TRACE( _T("OpenProcessToken error: %s\n"), GetError() );
 				Process.Close();
 			}
 		}
 		else
 		{
-			TRACE( _T("OpenProcess error: %u\n"), GetLastError() );
+			TRACE( _T("OpenProcess error: %s\n"), GetError() );
 		}
 	}
 
@@ -197,13 +199,13 @@ public:
 			}
 			else
 			{
-				TRACE( _T("Process32First error: %u\n"), GetLastError() );
+				TRACE( _T("Process32First error: %s\n"), GetError() );
 			}
 			CloseHandle( hProcessSnap );
 		}
 		else
 		{
-			TRACE( _T("CreateToolhelp32Snapshot(Process) error: %u\n"), GetLastError() );
+			TRACE( _T("CreateToolhelp32Snapshot(Process) error: %s\n"), GetError() );
 		}
 		return nullptr;
 	}

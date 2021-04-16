@@ -88,8 +88,8 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sUR
 
 	CUrlDialog dlg( this );
 	dlg.m_sTitle.Format( LoadString( IDS_ADD_SCOPE ),
-		( bInclude ? _T("Include") : _T("Exclude") ),
-		( bDefault ? _T("Default") : _T("User") ) );
+		(LPCTSTR) LoadString( bInclude ? IDS_RULE_INCLUDE : IDS_RULE_EXCLUDE ),
+		(LPCTSTR) LoadString( bDefault ? IDS_RULE_DEFAULT : IDS_RULE_USER ) );
 	if ( ! sURL.IsEmpty() )
 	{
 		dlg.m_sURL = sURL;
@@ -132,31 +132,30 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sUR
 void CSearchManagerDlg::Delete()
 {
 	// Enumerate items to delete
-	CList< const CItem* > to_delete;
+	std::list< const CItem* > to_delete;
 	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 	{
 		const int index = m_wndList.GetNextSelectedItem( pos );
 		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 		{
-			to_delete.AddTail( item );
+			to_delete.push_back( item );
 		}
 	}
 
 	// Delete items
-	if ( ! to_delete.IsEmpty() )
+	if ( ! to_delete.empty() )
 	{
 		CString msg;
-		msg.Format( IDS_DELETE_CONFIRM, to_delete.GetCount() );
+		msg.Format( IDS_DELETE_CONFIRM, to_delete.size() );
 		if ( AfxMessageBox( msg, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
 			const static CString deleting = LoadString( IDS_DELETING );
 			SetStatus( deleting );
 
 			// Step 1 - Delete from Windows Search
-			for ( POSITION pos = to_delete.GetHeadPosition(); pos; )
+			for ( auto pos = to_delete.begin(); pos != to_delete.end(); )
 			{
-				POSITION current_pos = pos;
-				auto item = to_delete.GetNext( pos );
+				const auto item = *pos;
 
 				if ( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS )
 				{
@@ -169,23 +168,28 @@ void CSearchManagerDlg::Delete()
 							hr = m_pScope->SaveAll();
 							if ( SUCCEEDED( hr ) )
 							{
-								to_delete.RemoveAt( current_pos );
+								pos = to_delete.erase( pos );
+
 								m_bRefresh = true;
+
+								continue;
 							}
 						}
 					}
+
+					++pos;
 				}
 				else if ( ! m_pScope )
 				{
 					// Cancel deletion
-					pos = nullptr;
-					to_delete.RemoveAll();
+					to_delete.clear();
 					AfxMessageBox( LoadString( IDS_CLOSED ), MB_OK | MB_ICONHAND );
 					break;
 				}
 				else
 				{
-					to_delete.RemoveAt( current_pos );
+					pos = to_delete.erase( pos );
+
 					for (;;)
 					{
 						CWaitCursor wc;
@@ -222,8 +226,7 @@ void CSearchManagerDlg::Delete()
 							else
 							{
 								// Cancel deletion
-								pos = nullptr;
-								to_delete.RemoveAll();
+								to_delete.clear();
 								break;
 							}
 						}
@@ -232,7 +235,7 @@ void CSearchManagerDlg::Delete()
 			}
 
 			// Step 2 - Delete from registry
-			if ( to_delete.GetCount() )
+			if ( ! to_delete.empty() )
 			{
 				if ( StopWindowsSearch() )
 				{
@@ -242,9 +245,9 @@ void CSearchManagerDlg::Delete()
 						// Try to get System privileges
 						CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
-						for ( POSITION pos = to_delete.GetHeadPosition(); pos; )
+						for ( auto pos = to_delete.begin(); pos != to_delete.end(); ++pos )
 						{
-							auto item = to_delete.GetNext( pos );
+							const auto item = *pos;
 
 							ASSERT( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS );
 
@@ -275,8 +278,7 @@ void CSearchManagerDlg::Delete()
 									else
 									{
 										// Cancel deletion
-										pos = nullptr;
-										to_delete.RemoveAll();
+										to_delete.clear();
 										break;
 									}
 								}
@@ -435,6 +437,20 @@ void CSearchManagerDlg::Rebuild()
 
 void CSearchManagerDlg::Defrag()
 {
+	const static CString prompt = LoadString( IDS_DEFRAG_CONFIRM );
+	const static CString status = LoadString( IDS_INDEXER_DEFRAG );
+	DatabaseOperation( prompt, status, _T("/d") );
+}
+
+void CSearchManagerDlg::Check()
+{
+	const static CString prompt = LoadString( IDS_CHECK_CONFIRM );
+	const static CString status = LoadString( IDS_INDEXER_CHECK );
+	DatabaseOperation( prompt, status, _T("/g") );
+}
+
+void CSearchManagerDlg::DatabaseOperation(const CString& prompt, const CString& status, const CString& options)
+{
 	CString system_dir;
 	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
 	system_dir.ReleaseBuffer();
@@ -442,12 +458,11 @@ void CSearchManagerDlg::Defrag()
 	CString folder = GetSearchDirectory();
 	if ( ! folder.IsEmpty() )
 	{
-		if ( AfxMessageBox( IDS_DEFRAG_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+		if ( AfxMessageBox( prompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
 			if ( StopWindowsSearch() )
 			{
-				// Start defragmentation
-				const static CString status = LoadString( IDS_INDEXER_DEFRAG );
+				// Start
 				SetStatus( status );
 
 				{
@@ -457,9 +472,11 @@ void CSearchManagerDlg::Defrag()
 					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
 					const CString cmd = system_dir + _T("\\cmd.exe");
-					const CString params = _T("/c ") + system_dir + _T("\\esentutl.exe /d \"") + folder + _T("Applications\\Windows\\Windows.edb\" /o && pause");
+					const CString params = _T("/k ") + system_dir + _T("\\esentutl.exe ") + options +
+						_T(" \"") + folder + _T("Applications\\Windows\\Windows.edb\" /o");
 
-					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC, GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
+					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC,
+						GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
 					if ( ShellExecuteEx( &sei ) && sei.hProcess )
 					{
 						// Wait for termination
@@ -573,6 +590,7 @@ bool CSearchManagerDlg::StopWindowsSearch()
 	const DWORD res = StopService( INDEXER_SERVICE );
 	if ( res == ERROR_SUCCESS )
 	{
+		SleepEx( 2000, FALSE );
 		return true;
 	}
 	else
@@ -595,6 +613,7 @@ bool CSearchManagerDlg::StartWindowsSearch()
 	const DWORD res = StartService( INDEXER_SERVICE );
 	if ( res == ERROR_SUCCESS )
 	{
+		SleepEx( 250, FALSE );
 		return true;
 	}
 	else

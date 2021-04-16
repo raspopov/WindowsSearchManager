@@ -87,12 +87,14 @@ protected:
 	CString			m_sIndexCache;
 	bool			m_bInUse;
 	bool			m_bRefresh;
+	CString			m_sUserAgent;
+	CString			m_sVersion;
 
 	CComPtr< ISearchCatalogManager >	m_pCatalog;
 	CComPtr< ISearchCrawlScopeManager >	m_pScope;
 
-	CList< CItem* >	m_List;
-	CMap< CString, LPCTSTR, int, int > m_Groups;
+	std::list< CItem* >	m_List;
+	std::map< CString, int > m_Groups;
 
 	// Get list group by name and GUID creating a new one if missed
 	int GetGroupId(const CString& name, REFGUID guid);
@@ -157,6 +159,11 @@ protected:
 
 	// Index defragmentation
 	void Defrag();
+
+	// Index checking
+	void Check();
+
+	void DatabaseOperation(const CString& prompt, const CString& status, const CString& options);
 
 	// Run Explorer for index folder
 	void Explore();

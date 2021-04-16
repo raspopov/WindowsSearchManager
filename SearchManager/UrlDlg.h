@@ -57,11 +57,16 @@ public:
 
 protected:
 	CBrowseCtrl m_wndUrl;
+	CMFCMenuButton m_btnInsert;
+
+	std::vector< CString > m_Protocols;
+	std::vector< CString > m_Users;
 
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	virtual BOOL OnInitDialog();
 
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnBnClickedInsertUrl();
 
 	DECLARE_MESSAGE_MAP()
 };

@@ -100,3 +100,6 @@ struct error_t
 		error.Format( code, hr );
 	}
 };
+
+#define GetError()		( static_cast< LPCTSTR >( static_cast< CString >( error_t() ) ) )
+#define GetErrorEx(x)	( static_cast< LPCTSTR >( static_cast< CString >( error_t( HRESULT_FROM_WIN32( x ) ) ) ) )

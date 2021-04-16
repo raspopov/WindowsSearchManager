@@ -78,9 +78,14 @@ void CItem::ParseURL(bool bGuid)
 		if ( end != -1 )
 		{
 			const int len = end - begin;
-			if ( len > 8 && URL.GetAt( begin ) == _T('{') && URL.GetAt( end - 1 ) == _T('}') )
+			if ( len > 8 &&
+				URL.GetAt( begin ) == _T('{') &&
+				URL.GetAt( begin + 1 ) == _T('S') &&
+				URL.GetAt( begin + 2 ) == _T('-') &&
+				URL.GetAt( end - 1 ) == _T('}') )
 			{
 				User = URL.Mid( begin + 1, len - 2 );
+				Path = URL.Mid( end + 1 );
 
 				PSID psid = nullptr;
 				if ( ConvertStringSidToSid( User, &psid ) )
@@ -97,8 +102,14 @@ void CItem::ParseURL(bool bGuid)
 					LocalFree( psid );
 				}
 			}
-
-			Path = URL.Mid( end + 1 );
+			else
+			{
+				if ( URL.GetAt( begin ) == _T('/') )
+				{
+					++ begin;
+				}
+				Path = URL.Mid( begin );
+			}
 		}
 		else
 		{
@@ -108,6 +119,8 @@ void CItem::ParseURL(bool bGuid)
 		if ( Protocol.CompareNoCase( DEFAULT_PROTOCOL ) == 0 )
 		{
 			// Default root
+			const static CString def = LoadString( IDS_DEFAULT_ROOT );
+			Name = def;
 		}
 		else if ( Protocol.CompareNoCase( FILE_PROTOCOL ) == 0 )
 		{
@@ -151,12 +164,12 @@ void CItem::ParseURL(bool bGuid)
 							}
 							else
 							{
-								TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)(CString)error_t(), (LPCTSTR)filename );
+								TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)filename, GetError() );
 							}
 						}
 						else
 						{
-							TRACE( _T("Disk missed: %c\n"), disk_letter );
+							TRACE( _T("Disk missed: %c:\\n"), disk_letter );
 						}
 					}
 				}
@@ -265,15 +278,19 @@ int CRoot::InsertTo(CListCtrl& list, int group_id) const
 	item.iItem = CItem::InsertTo( list, group_id );
 
 	item.iSubItem = 2;
-	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? _T("In Scope") : _T("") );
+	const static CString in_scope = LoadString( IDS_ROOT_IN_SCOPE );
+	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? (LPCTSTR)in_scope : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
-	item.pszText = const_cast< LPTSTR >( IsHierarchical ? _T("Hierarchical") : _T("") );
+	const static CString hier = LoadString( IDS_ROOT_HIER );
+	item.pszText = const_cast< LPTSTR >( IsHierarchical ? (LPCTSTR)hier : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
-	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? ( UseNotificationsOnly ? _T("Notify Only") : _T("Notify") ): _T("") );
+	const static CString notify = LoadString( IDS_ROOT_NOTIFY );
+	const static CString notify_only = LoadString( IDS_ROOT_NOTIFY_ONLY );
+	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? ( UseNotificationsOnly ? (LPCTSTR)notify_only : (LPCTSTR)notify ): _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;
@@ -400,15 +417,20 @@ int CRule::InsertTo(CListCtrl& list, int group_id) const
 	item.iItem = CItem::InsertTo( list, group_id );
 
 	item.iSubItem = 2;
-	item.pszText = const_cast< LPTSTR >( IsInclude ? _T("Include") : _T("Exclude") );
+	const static CString incl = LoadString( IDS_RULE_INCLUDE );
+	const static CString excl = LoadString( IDS_RULE_EXCLUDE );
+	item.pszText = const_cast< LPTSTR >( IsInclude ? (LPCTSTR)incl : (LPCTSTR)excl );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
-	item.pszText = const_cast< LPTSTR >( IsDefault ? _T("Default") : _T("User") );
+	const static CString def = LoadString( IDS_RULE_DEFAULT );
+	const static CString user = LoadString( IDS_RULE_USER );
+	item.pszText = const_cast< LPTSTR >( IsDefault ? (LPCTSTR)def : (LPCTSTR)user );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
-	item.pszText = const_cast< LPTSTR >( HasChild ? _T("Has child") : _T("") );
+	const static CString child = LoadString( IDS_RULE_HAS_CHILD );
+	item.pszText = const_cast< LPTSTR >( HasChild ? (LPCTSTR)child : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;

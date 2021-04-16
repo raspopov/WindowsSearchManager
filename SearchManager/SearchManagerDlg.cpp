@@ -109,21 +109,15 @@ BOOL CSearchManagerDlg::OnInitDialog()
 	{
 		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_STATE, 0, MFS_DEFAULT };
 
-		menu->AddMenu( _T("IDR_ADD_MENU"), IDR_ADD_MENU );
-		menu->AddMenu( _T("IDR_LIST_MENU"), IDR_LIST_MENU );
-		menu->AddMenu( _T("IDR_REINDEX_MENU"), IDR_REINDEX_MENU );
-		menu->AddMenu( _T("IDR_SERVICE_MENU"), IDR_SERVICE_MENU );
+		menu->AddMenu( _T("ADD"), IDR_ADD_MENU );
+		menu->AddMenu( _T("LIST"), IDR_LIST_MENU );
+		menu->AddMenu( _T("REINDEX"), IDR_REINDEX_MENU );
+		menu->AddMenu( _T("SERVICE"), IDR_SERVICE_MENU );
 
-		m_btnReindex.m_bDefaultClick = FALSE;
-		m_btnReindex.m_bOSMenu = FALSE;
 		m_btnReindex.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_REINDEX_MENU ), 0 );
 
-		m_btnService.m_bDefaultClick = FALSE;
-		m_btnService.m_bOSMenu = FALSE;
 		m_btnService.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_SERVICE_MENU ), 0 );
 
-		m_btnAdd.m_bDefaultClick = TRUE;
-		m_btnAdd.m_bOSMenu = FALSE;
 		m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 );
 		SetMenuItemInfo( m_btnAdd.m_hMenu, 0, TRUE, &mi );
 	}
@@ -371,6 +365,10 @@ void CSearchManagerDlg::OnBnClickedIndex()
 
 	case ID_DEFAULT:
 		Default( true );
+		break;
+
+	case ID_CHECK:
+		Check();
 		break;
 
 	case ID_DEFRAG:
