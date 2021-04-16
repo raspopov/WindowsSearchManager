@@ -14,7 +14,7 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
 - Fine tuning of indexed locations (add, edit, delete) including deleting of orphan ones (on unavailable disks)
 - Bulk operations
 - Direct control of Windows Search™ engine
-- Database defragmentation (Windows.edb file)
+- Database checking and defragmentation (Windows.edb file)
 - Nifty context menu
 
 ### Hotkeys
