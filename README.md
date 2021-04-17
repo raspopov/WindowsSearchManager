@@ -26,7 +26,7 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
 
 ## System Requirements
 
-- Windows XP or later, 32 or 64-bit.
+- Windows Vista or later, 32 or 64-bit.
 - Microsoft Visual C++ 2015-2019 Redistributables ([32-bit](https://aka.ms/vs/15/release/VC_redist.x86.exe)/[64-bit](https://aka.ms/vs/15/release/VC_redist.x64.exe)).
 - Administrator rights (optional).
 

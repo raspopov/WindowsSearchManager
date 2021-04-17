@@ -80,7 +80,7 @@ void CItem::ParseURL(bool bGuid)
 			const int len = end - begin;
 			if ( len > 8 &&
 				URL.GetAt( begin ) == _T('{') &&
-				URL.GetAt( begin + 1 ) == _T('S') &&
+				( URL.GetAt( begin + 1 ) == _T('S') || URL.GetAt( begin + 1 ) == _T('s') ) &&
 				URL.GetAt( begin + 2 ) == _T('-') &&
 				URL.GetAt( end - 1 ) == _T('}') )
 			{

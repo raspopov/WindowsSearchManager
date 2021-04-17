@@ -126,7 +126,7 @@ BOOL CUrlDialog::OnInitDialog()
 			}
 			else
 			{
-				TRACE( _T("ConvertSidToStringSid error: %s\n"), GetError() );
+				TRACE( _T("RegOpenKeyFull error: %s\n"), GetError() );
 			}
 
 			int id = ID_INSERT_PROTOCOL;
@@ -254,7 +254,11 @@ void ReplaceProtocol(CString& sURL, const CString& sProtocol)
 
 void ReplaceSID(CString& sURL, const CString& sSID)
 {
-	const int begin_sid = sURL.Find( _T("{S-") );
+	int begin_sid = sURL.Find( _T("{S-") );
+	if ( begin_sid == -1 )
+	{
+		begin_sid = sURL.Find( _T("{s-") );
+	}
 	if ( begin_sid != -1 )
 	{
 		const int end_sid = sURL.Find( _T("}"), begin_sid + 2 );
@@ -290,11 +294,11 @@ void CUrlDialog::OnBnClickedInsertUrl()
 {
 	UpdateData();
 
-	if ( m_btnInsert.m_nMenuResult >= ID_INSERT_PROTOCOL && m_btnInsert.m_nMenuResult < ID_INSERT_PROTOCOL + m_Protocols.size() )
+	if ( m_btnInsert.m_nMenuResult >= ID_INSERT_PROTOCOL && m_btnInsert.m_nMenuResult < ID_INSERT_PROTOCOL + static_cast< int >( m_Protocols.size() ) )
 	{
 		ReplaceProtocol( m_sURL, m_Protocols[ m_btnInsert.m_nMenuResult - ID_INSERT_PROTOCOL ] );
 	}
-	else if ( m_btnInsert.m_nMenuResult >= ID_INSERT_USER && m_btnInsert.m_nMenuResult < ID_INSERT_USER + m_Users.size() )
+	else if ( m_btnInsert.m_nMenuResult >= ID_INSERT_USER && m_btnInsert.m_nMenuResult < ID_INSERT_USER + static_cast< int >( m_Users.size() ) )
 	{
 		ReplaceSID( m_sURL, m_Users[ m_btnInsert.m_nMenuResult - ID_INSERT_USER ] );
 	}
