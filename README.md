@@ -28,16 +28,18 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
 
 - Windows Vista or later, 32 or 64-bit.
 - Microsoft Visual C++ 2015-2019 Redistributables ([32-bit](https://aka.ms/vs/15/release/VC_redist.x86.exe)/[64-bit](https://aka.ms/vs/15/release/VC_redist.x64.exe)).
-- Administrator rights (optional).
+- Administrator rights optional but highly recommended.
 
 ## Development Requirements
 
 - [Microsoft Visual Studio 2017 Community](https://aka.ms/vs/15/release/vs_Community.exe) with components:
-- Microsoft.VisualStudio.Workload.NativeDesktop
-- Microsoft.VisualStudio.Component.VC.ATLMFC
-- Microsoft.VisualStudio.Component.WinXP
-- Microsoft.VisualStudio.ComponentGroup.NativeDesktop.WinXP
-- Microsoft.VisualStudio.Component.NuGet
+  - Microsoft.VisualStudio.Workload.NativeDesktop
+  - Microsoft.VisualStudio.Component.VC.ATLMFC
+  - Microsoft.VisualStudio.Component.WinXP
+  - Microsoft.VisualStudio.ComponentGroup.NativeDesktop.WinXP
+  - Microsoft.VisualStudio.Component.NuGet
+- Windows 10 SDK 10.0.17763
+- InnoSetup 5.6.1 (automatically installed via NuGet)
 
 ## Licenses
 
@@ -56,7 +58,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.If not, see < http://www.gnu.org/licenses/>.
+along with this program.If not, see http://www.gnu.org/licenses/.
 
 ## Thanks
 
