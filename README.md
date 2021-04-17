@@ -39,13 +39,15 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
   - Microsoft.VisualStudio.ComponentGroup.NativeDesktop.WinXP
   - Microsoft.VisualStudio.Component.NuGet
 - Windows 10 SDK 10.0.17763
-- InnoSetup 5.6.1 (automatically installed via NuGet)
+- NuGet packages (automatically installed):
+  - InnoSetup 5.6.1
+  - Pandoc 2.1.0
 
 ## Licenses
 
 Copyright (C) 2012-2021 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
-https://github.com/raspopov/WindowsSearchManager
+<https://github.com/raspopov/WindowsSearchManager>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -58,7 +60,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.If not, see http://www.gnu.org/licenses/.
+along with this program.If not, see <http://www.gnu.org/licenses/>.
 
 ## Thanks
 

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework">
+  <ContentType
+    Name="Markdown"
+    DisplayName="Markdown Schema"
+    ItemType="PandocSchema" />
+  <ItemType
+    Name="PandocSchema"
+    DisplayName="Pandoc Schema" />
+  <FileExtension
+    Name="*.md"
+    ContentType="Markdown" />
+</ProjectSchemaDefinitions>

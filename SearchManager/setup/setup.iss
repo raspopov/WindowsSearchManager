@@ -56,13 +56,13 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#MyAppSource}"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
-Source: "..\..\README.md"; DestName: "ReadMe.txt"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
+Source: "{#MyOutputDir}\README.html"; DestName: "ReadMe.html"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
 Source: "..\..\LICENSE"; DestName: "License.txt"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
 
 [Icons]
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; Tasks: desktopicon
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"
-Name: "{group}\ReadMe.txt"; Filename: "{app}\ReadMe.txt"
+Name: "{group}\ReadMe.html"; Filename: "{app}\ReadMe.html"
 Name: "{group}\License.txt"; Filename: "{app}\License.txt"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}";	Filename: "{uninstallexe}"
 
