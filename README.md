@@ -40,7 +40,7 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
   - Microsoft.VisualStudio.Component.NuGet
 - Windows 10 SDK 10.0.17763
 - NuGet packages (automatically installed):
-  - InnoSetup 5.6.1
+  - InnoSetup 6.1.2
   - Pandoc 2.1.0
 
 ## Licenses

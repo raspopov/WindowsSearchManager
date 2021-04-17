@@ -27,7 +27,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 AppMutex=Global\{#MyAppName}
 AppCopyright={#MyAppCopyright}
-DefaultDirName={pf}\{#MyAppPublisher}\{#MyAppName}
+DefaultDirName={commonpf}\{#MyAppPublisher}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir={#MyOutputDir}
 OutputBaseFilename={#MyOutput}
@@ -71,6 +71,6 @@ Filename: "{app}\{#MyAppExe}"; Description: "{cm:LaunchProgram,{#StringChange(My
 
 [UninstallDelete]
 Name: "{app}"; Type: dirifempty
-Name: "{pf}\{#MyAppPublisher}"; Type: dirifempty
+Name: "{commonpf}\{#MyAppPublisher}"; Type: dirifempty
 Name: "{localappdata}\{#MyAppPublisher}\{#MyAppName}"; Type: filesandordirs
 Name: "{localappdata}\{#MyAppPublisher}"; Type: dirifempty
