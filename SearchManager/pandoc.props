@@ -11,7 +11,7 @@
      Outputs="$(OutDir)%(PandocSchema.Filename).html"
      AfterTargets="PrepareForBuild">
      <Message Importance="High" Text="Compiling %(PandocSchema.Identity)" />
-     <Exec Command="for /r %%i in (*pandoc.exe) do set pandoc=&quot;%%i&quot; &#10; if &quot;%pandoc%&quot;==&quot;&quot; ( echo Pandoc not found! &amp;&amp; exit /b 1 ) &#10; %pandoc% --self-contained --toc  &quot;--metadata=title:%(PandocSchema.Filename)&quot; -o &quot;$(OutDir)%(PandocSchema.Filename).html&quot; &quot;%(PandocSchema.Identity)&quot;" />
+     <Exec Command="for /r %%i in (*pandoc.exe) do set pandoc=&quot;%%i&quot; &#10; if &quot;%pandoc%&quot;==&quot;&quot; ( echo Pandoc not found! &amp;&amp; exit /b 1 ) &#10; %pandoc% --self-contained --toc --no-check-certificate &quot;--metadata=title:%(PandocSchema.Filename)&quot; -o &quot;$(OutDir)%(PandocSchema.Filename).html&quot; &quot;%(PandocSchema.Identity)&quot;" />
 	 <WriteLinesToFile
        File="$(TLogLocation)\Pandoc.read.1.tlog"
        Lines="^%(PandocSchema.FullPath)" />
