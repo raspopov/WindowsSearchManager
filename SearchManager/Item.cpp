@@ -134,7 +134,7 @@ void CItem::ParseURL(bool bGuid)
 					const CString guid = _T("{") + Path.Mid( 4, 36 ) + _T("}");
 
 					// Cut-off the GUID from the Path and URL
-					Path = Path.Left( 3 ) + (LPCTSTR)Path.Mid( 42 );
+					Path = Path.Left( 3 ) + Path.Mid( 42 );
 					URL = Protocol + _T(":///") + Path;
 
 					if ( SUCCEEDED( CLSIDFromString( guid, &Guid ) ) && bGuid )
@@ -279,18 +279,18 @@ int CRoot::InsertTo(CListCtrl& list, int group_id) const
 
 	item.iSubItem = 2;
 	const static CString in_scope = LoadString( IDS_ROOT_IN_SCOPE );
-	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? (LPCTSTR)in_scope : _T("") );
+	item.pszText = const_cast< LPTSTR >( IncludedInCrawlScope ? static_cast< LPCTSTR >( in_scope ) : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
 	const static CString hier = LoadString( IDS_ROOT_HIER );
-	item.pszText = const_cast< LPTSTR >( IsHierarchical ? (LPCTSTR)hier : _T("") );
+	item.pszText = const_cast< LPTSTR >( IsHierarchical ? static_cast< LPCTSTR >( hier ) : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
 	const static CString notify = LoadString( IDS_ROOT_NOTIFY );
 	const static CString notify_only = LoadString( IDS_ROOT_NOTIFY_ONLY );
-	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? ( UseNotificationsOnly ? (LPCTSTR)notify_only : (LPCTSTR)notify ): _T("") );
+	item.pszText = const_cast< LPTSTR >( ProvidesNotifications ? ( UseNotificationsOnly ? static_cast< LPCTSTR >( notify_only ) : static_cast< LPCTSTR >( notify ) ): _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;
@@ -419,18 +419,18 @@ int CRule::InsertTo(CListCtrl& list, int group_id) const
 	item.iSubItem = 2;
 	const static CString incl = LoadString( IDS_RULE_INCLUDE );
 	const static CString excl = LoadString( IDS_RULE_EXCLUDE );
-	item.pszText = const_cast< LPTSTR >( IsInclude ? (LPCTSTR)incl : (LPCTSTR)excl );
+	item.pszText = const_cast< LPTSTR >( IsInclude ? static_cast< LPCTSTR >( incl ) : static_cast< LPCTSTR >( excl ) );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 3;
 	const static CString def = LoadString( IDS_RULE_DEFAULT );
 	const static CString user = LoadString( IDS_RULE_USER );
-	item.pszText = const_cast< LPTSTR >( IsDefault ? (LPCTSTR)def : (LPCTSTR)user );
+	item.pszText = const_cast< LPTSTR >( IsDefault ? static_cast< LPCTSTR >( def ) : static_cast< LPCTSTR >( user ) );
 	VERIFY( list.SetItem( &item ) );
 
 	item.iSubItem = 4;
 	const static CString child = LoadString( IDS_RULE_HAS_CHILD );
-	item.pszText = const_cast< LPTSTR >( HasChild ? (LPCTSTR)child : _T("") );
+	item.pszText = const_cast< LPTSTR >( HasChild ? static_cast< LPCTSTR >( child ) : _T("") );
 	VERIFY( list.SetItem( &item ) );
 
 	return item.iItem;

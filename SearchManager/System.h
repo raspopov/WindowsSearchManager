@@ -245,7 +245,7 @@ private:
 						NO_MULTIPLE_TRUSTEE,
 						TRUSTEE_IS_SID,
 						TRUSTEE_IS_USER,
-						(LPTSTR)( (TOKEN_USER*)pBuf )->User.Sid
+						static_cast< LPTSTR >( reinterpret_cast< TOKEN_USER* >( pBuf )->User.Sid )
 					}
 				};
 

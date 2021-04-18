@@ -60,7 +60,7 @@ int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.size() ) };
 	VERIFY( m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots ) != -1 );
 
-	m_Groups.insert( std::make_pair( key, grpRoots.iGroupId ) );
+	m_Groups.emplace( std::make_pair( key, grpRoots.iGroupId ) );
 
 	return grpRoots.iGroupId;
 }

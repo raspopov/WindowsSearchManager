@@ -373,7 +373,7 @@ LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey)
 					break;
 				}
 
-				keys.insert( number );
+				keys.emplace( number );
 			}
 
 			if ( res == ERROR_SUCCESS )

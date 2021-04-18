@@ -97,8 +97,8 @@ BOOL CUrlDialog::OnInitDialog()
 		if ( SetMenuItemInfo( m_btnInsert.m_hMenu, 0, TRUE, &mi ) )
 		{
 			std::set < CString > items;
-			items.insert( DEFAULT_PROTOCOL _T("://") );
-			items.insert( FILE_PROTOCOL _T(":///") );
+			items.emplace( DEFAULT_PROTOCOL _T("://") );
+			items.emplace( FILE_PROTOCOL _T(":///") );
 
 			HKEY hProtocolsKey;
 			LSTATUS res = RegOpenKeyFull( HKEY_LOCAL_MACHINE, KEY_PROTOCOLS, KEY_ENUMERATE_SUB_KEYS, &hProtocolsKey );
@@ -119,7 +119,7 @@ BOOL CUrlDialog::OnInitDialog()
 					proto.MakeLower();
 					if ( proto.CompareNoCase( DEFAULT_PROTOCOL ) != 0 && proto.CompareNoCase( FILE_PROTOCOL ) != 0 )
 					{
-						items.insert( proto + _T("://") );
+						items.emplace( proto + _T("://") );
 					}
 				}
 				RegCloseKey( hProtocolsKey );
@@ -147,7 +147,7 @@ BOOL CUrlDialog::OnInitDialog()
 			DWORD user_size = MAX_PATH;
 			GetUserNameEx( EXTENDED_NAME_FORMAT::NameSamCompatible, user.GetBuffer( MAX_PATH ), &user_size );
 			user.ReleaseBuffer();
-			items.insert( user );
+			items.emplace( user );
 
 			CString computer;
 			DWORD computer_size = MAX_PATH;
@@ -167,7 +167,7 @@ BOOL CUrlDialog::OnInitDialog()
 					{
 						if ( ( buf[ i ].usri1_flags & UF_ACCOUNTDISABLE ) == 0 && ( buf[ i ].usri1_flags & UF_NORMAL_ACCOUNT ) != 0 )
 						{
-							items.insert( computer + _T('\\') + buf[ i ].usri1_name );
+							items.emplace( computer + _T('\\') + buf[ i ].usri1_name );
 						}
 						index = buf[ i ].usri1_next_index;
 					}

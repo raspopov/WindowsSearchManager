@@ -412,7 +412,7 @@ void CSearchManagerDlg::Rebuild()
 					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
 					folder.AppendChar( 0 ); // double null terminated for SHFileOperation
-					SHFILEOPSTRUCT fop = { GetSafeHwnd(), FO_DELETE, (LPCTSTR)folder, nullptr, FOF_ALLOWUNDO | FOF_NOCONFIRMATION };
+					SHFILEOPSTRUCT fop = { GetSafeHwnd(), FO_DELETE, static_cast< LPCTSTR >( folder ), nullptr, FOF_ALLOWUNDO | FOF_NOCONFIRMATION };
 					if ( GetFileAttributes( folder ) == INVALID_FILE_ATTRIBUTES || SHFileOperation( &fop ) == 0 )
 					{
 						// Set an option to revert to initial state
