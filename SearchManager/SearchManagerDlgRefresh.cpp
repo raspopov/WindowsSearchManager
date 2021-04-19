@@ -92,6 +92,7 @@ void CSearchManagerDlg::Refresh()
 	if ( m_bRefresh )
 	{
 		m_bRefresh = false;
+		m_nDrives = GetLogicalDrives();
 
 		CWaitCursor wc;
 

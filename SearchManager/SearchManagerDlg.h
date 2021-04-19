@@ -95,6 +95,7 @@ protected:
 
 	std::list< CItem* >	m_List;
 	std::map< CString, int > m_Groups;
+	DWORD			m_nDrives;
 	CString			m_sModulePath;
 
 	// Get list group by name and GUID creating a new one if missed
@@ -201,6 +202,8 @@ protected:
 	afx_msg void OnUpdateReindex(CCmdUI *pCmdUI);
 	afx_msg void OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg BOOL OnDeviceChange(UINT nEventType, DWORD_PTR dwData);
+	afx_msg BOOL OnHelpInfo(HELPINFO* pHelpInfo);
 
 	DECLARE_MESSAGE_MAP()
 };

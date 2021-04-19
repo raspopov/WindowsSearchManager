@@ -39,6 +39,7 @@ CSearchManagerDlg::CSearchManagerDlg(CWnd* pParent /*=NULL*/)
 	, m_hIcon		( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
 	, m_bRefresh	( true )
 	, m_bInUse		( false )
+	, m_nDrives		( 0 )
 {
 	GetModuleFileName( nullptr, m_sModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
 	m_sModulePath.ReleaseBuffer();
@@ -81,6 +82,8 @@ BEGIN_MESSAGE_MAP(CSearchManagerDlg, CDialogExSized)
 	ON_WM_SIZE()
 	ON_COMMAND(ID_REINDEX, &CSearchManagerDlg::OnReindex)
 	ON_UPDATE_COMMAND_UI(ID_REINDEX, &CSearchManagerDlg::OnUpdateReindex)
+	ON_WM_DEVICECHANGE()
+	ON_WM_HELPINFO()
 END_MESSAGE_MAP()
 
 BOOL CSearchManagerDlg::OnInitDialog()
@@ -256,7 +259,8 @@ void CSearchManagerDlg::OnNMClickSysindex(NMHDR* pNMHDR, LRESULT *pResult)
 
 	const CString cmd = system_dir + _T("\\rundll32.exe");
 
-	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd, _T("shell32.dll,Control_RunDLL srchadmin.dll"), system_dir, SW_SHOWNORMAL };
+	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd,
+		_T("shell32.dll,Control_RunDLL srchadmin.dll"), system_dir, SW_SHOWNORMAL };
 	if ( ShellExecuteEx( &sei ) )
 	{
 		SleepEx( 500, FALSE );
@@ -645,7 +649,7 @@ void CSearchManagerDlg::ReSize()
 	CRect rc;
 	m_wndList.GetWindowRect( &rc );
 
-	m_wndList.SetColumnWidth( 1, rc.Width() - COLUMN_SIZE * 4- GetSystemMetrics( SM_CXVSCROLL ) - GetSystemMetrics( SM_CXEDGE ) * 2 );
+	m_wndList.SetColumnWidth( 1, rc.Width() - COLUMN_SIZE * 4 - GetSystemMetrics( SM_CXVSCROLL ) - GetSystemMetrics( SM_CXEDGE ) * 2 );
 }
 
 void CSearchManagerDlg::OnSize(UINT nType, int cx, int cy)
@@ -656,4 +660,29 @@ void CSearchManagerDlg::OnSize(UINT nType, int cx, int cy)
 	{
 		ReSize();
 	}
+}
+
+BOOL CSearchManagerDlg::OnDeviceChange(UINT nEventType, DWORD_PTR dwData)
+{
+	UNUSED_ALWAYS( nEventType );
+	UNUSED_ALWAYS( dwData );
+
+	if ( m_nDrives != GetLogicalDrives() )
+	{
+		m_bRefresh = true;
+	}
+	return TRUE;
+}
+
+BOOL CSearchManagerDlg::OnHelpInfo(HELPINFO* pHelpInfo)
+{
+	UNUSED_ALWAYS( pHelpInfo );
+
+	CWaitCursor wc;
+
+	const CString help = m_sModulePath.Left( static_cast< int >( PathFindFileName( m_sModulePath ) - m_sModulePath ) ) + _T("Readme.html");
+	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, help, nullptr, nullptr, SW_SHOWNORMAL };
+	ShellExecuteEx( &sei );
+
+	return TRUE;
 }
