@@ -138,7 +138,10 @@ void CSearchManagerDlg::Delete()
 		const int index = m_wndList.GetNextSelectedItem( pos );
 		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 		{
-			to_delete.push_back( item );
+			if ( ! item->HasError() )
+			{
+				to_delete.push_back( item );
+			}
 		}
 	}
 
@@ -317,27 +320,30 @@ void CSearchManagerDlg::Reindex()
 		const int index = m_wndList.GetNextSelectedItem( pos );
 		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 		{
-			HRESULT hr = item->Reindex( m_pCatalog );
-			if ( hr != S_OK )
+			if ( ! item->HasError() )
 			{
-				const error_t result( hr );
-				const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
-					MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
-				if ( res == IDRETRY )
+				HRESULT hr = item->Reindex( m_pCatalog );
+				if ( hr != S_OK )
 				{
-					// Retry deletion
-					pos = prev;
-					continue;
-				}
-				else if ( res == IDIGNORE )
-				{
-					// Ignore error and continue deletion
-					continue;
-				}
-				else
-				{
-					// Cancel deletion
-					break;
+					const error_t result( hr );
+					const int res = AfxMessageBox( result.msg + _T("\n\n") + result.error + _T("\n\n") + item->URL,
+						MB_ABORTRETRYIGNORE | ( SUCCEEDED( hr ) ? MB_ICONINFORMATION : MB_ICONEXCLAMATION ) );
+					if ( res == IDRETRY )
+					{
+						// Retry deletion
+						pos = prev;
+						continue;
+					}
+					else if ( res == IDIGNORE )
+					{
+						// Ignore error and continue deletion
+						continue;
+					}
+					else
+					{
+						// Cancel deletion
+						break;
+					}
 				}
 			}
 		}
