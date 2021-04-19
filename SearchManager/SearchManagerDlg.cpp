@@ -35,11 +35,13 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 IMPLEMENT_DYNAMIC(CSearchManagerDlg, CDialogExSized)
 
 CSearchManagerDlg::CSearchManagerDlg(CWnd* pParent /*=NULL*/)
-	: CDialogExSized		( CSearchManagerDlg::IDD, pParent )
+	: CDialogExSized( CSearchManagerDlg::IDD, pParent )
+	, m_hIcon		( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
 	, m_bRefresh	( true )
 	, m_bInUse		( false )
 {
-	m_hIcon = AfxGetApp()->LoadIcon( IDR_MAINFRAME );
+	GetModuleFileName( nullptr, m_sModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
+	m_sModulePath.ReleaseBuffer();
 }
 
 void CSearchManagerDlg::DoDataExchange(CDataExchange* pDX)
@@ -87,6 +89,31 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	SetWindowText( LoadString( AFX_IDS_APP_TITLE ) );
 
+	// Load version from .exe-file properties
+	DWORD dwSize = 0;
+	dwSize = GetFileVersionInfoSize( m_sModulePath, &dwSize );
+	if ( dwSize )
+	{
+		CAutoVectorPtr< BYTE >pBuffer( new BYTE[ dwSize ] );
+		if ( pBuffer )
+		{
+			if ( GetFileVersionInfo( m_sModulePath, 0, dwSize, pBuffer ) )
+			{
+				VS_FIXEDFILEINFO* pTable = nullptr;
+				UINT nInfoSize = 0;
+				if ( VerQueryValue( pBuffer, _T("\\"), reinterpret_cast< LPVOID* >( &pTable ), &nInfoSize ) )
+				{
+					CString version;
+					version.Format( _T("v.%u.%u.%u.%u"), HIWORD( pTable->dwFileVersionMS ),
+						LOWORD( pTable->dwFileVersionMS ),
+						HIWORD( pTable->dwFileVersionLS ),
+						LOWORD( pTable->dwFileVersionLS ) );
+					SetDlgItemText( IDC_VERSION, version );
+				}
+			}
+		}
+	}
+
 	SetIcon( m_hIcon, TRUE );
 	SetIcon( m_hIcon, FALSE );
 
@@ -94,11 +121,8 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	CRect rc;
 	m_wndList.GetWindowRect( &rc );
-
-	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT );
-
+	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP );
 	m_wndList.EnableGroupView( TRUE );
-
 	m_wndList.InsertColumn( 0, _T(""), LVCFMT_LEFT, COLUMN_SIZE );
 	m_wndList.InsertColumn( 1, _T(""), LVCFMT_LEFT, COLUMN_SIZE );
 	m_wndList.InsertColumn( 2, _T(""), LVCFMT_CENTER, COLUMN_SIZE );
@@ -107,8 +131,6 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	if ( auto menu = theApp.GetContextMenuManager() )
 	{
-		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_STATE, 0, MFS_DEFAULT };
-
 		menu->AddMenu( _T("ADD"), IDR_ADD_MENU );
 		menu->AddMenu( _T("LIST"), IDR_LIST_MENU );
 		menu->AddMenu( _T("REINDEX"), IDR_REINDEX_MENU );
@@ -119,6 +141,7 @@ BOOL CSearchManagerDlg::OnInitDialog()
 		m_btnService.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_SERVICE_MENU ), 0 );
 
 		m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 );
+		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_STATE, 0, MFS_DEFAULT };
 		SetMenuItemInfo( m_btnAdd.m_hMenu, 0, TRUE, &mi );
 	}
 

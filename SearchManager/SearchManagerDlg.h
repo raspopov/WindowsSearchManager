@@ -95,6 +95,7 @@ protected:
 
 	std::list< CItem* >	m_List;
 	std::map< CString, int > m_Groups;
+	CString			m_sModulePath;
 
 	// Get list group by name and GUID creating a new one if missed
 	int GetGroupId(const CString& name, REFGUID guid);

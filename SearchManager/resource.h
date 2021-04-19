@@ -81,6 +81,7 @@
 #define IDC_BROWSER                     1016
 #define IDC_INFO                        1017
 #define IDC_INSERT_URL                  1018
+#define IDC_VERSION                     1019
 #define ID_INCLUDE_USER_SCOPE           32775
 #define ID_EXCLUDE_USER_SCOPE           32776
 #define ID_INCLUDE_DEFAULT_SCOPE        32777
@@ -106,7 +107,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        141
 #define _APS_NEXT_COMMAND_VALUE         32797
-#define _APS_NEXT_CONTROL_VALUE         1019
+#define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

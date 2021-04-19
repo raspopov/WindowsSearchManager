@@ -54,6 +54,8 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <lmapibuf.h>
 #pragma comment(lib, "netapi32.lib")
 
+#pragma comment(lib, "version.lib")
+
 #include <atlsecurity.h>
 
 #include <afxcontextmenumanager.h>
