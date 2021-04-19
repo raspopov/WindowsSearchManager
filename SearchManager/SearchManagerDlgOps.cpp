@@ -157,7 +157,7 @@ void CSearchManagerDlg::Delete()
 			{
 				const auto item = *pos;
 
-				if ( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS )
+				if ( item->HasNonIndexDelete() )
 				{
 					// Try step 1 first but else skip to step 2
 					if ( m_pScope )
@@ -249,7 +249,7 @@ void CSearchManagerDlg::Delete()
 						{
 							const auto item = *pos;
 
-							ASSERT( item->Group == GROUP_OFFLINE_RULES || item->Group == GROUP_OFFLINE_ROOTS );
+							ASSERT( item->HasNonIndexDelete() );
 
 							for (;;)
 							{

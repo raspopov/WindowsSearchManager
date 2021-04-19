@@ -99,10 +99,15 @@ protected:
 	CString			m_sModulePath;
 
 	// Get list group by name and GUID creating a new one if missed
-	int GetGroupId(const CString& name, REFGUID guid);
+	int GetGroupId(const CString& name, REFGUID guid = GUID(), const CString& info = CString());
 
 	// Update interface items
 	void UpdateInterface();
+
+	BOOL IsAddEnabled() const;
+	BOOL IsEditEnabled() const;
+	BOOL IsDeleteEnabled() const;
+	BOOL IsReindexEnabled() const;
 
 	// Resize interface items including list columns sizes
 	void ReSize();
@@ -125,11 +130,14 @@ protected:
 	HRESULT EnumerateScopeRules(ISearchCrawlScopeManager* pScope);
 
 	// Enumerate search roots from the registry
-	void EnumerateRegistryRoots();
+	HRESULT EnumerateRegistryRoots();
 
 	// Enumerate search scope rules from the registry
-	void EnumerateRegistryDefaultRules();
-	void EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName);
+	HRESULT EnumerateRegistryDefaultRules();
+	HRESULT EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName);
+
+	// Enumerate search volumes
+	void EnumerateVolumes();
 
 	void SetStatus(const CString& sStatus);
 

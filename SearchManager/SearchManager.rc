@@ -341,7 +341,7 @@ STRINGTABLE
 BEGIN
     IDS_DELETING            "Deleting..."
     IDS_CONNECTING          "Connecting to Windows Search™..."
-    IDS_DELETE_CONFIRM      "Are you about to delete %u selected item(s) from the index?"
+    IDS_DELETE_CONFIRM      "Are you about to delete %u selected item(s)?"
     IDS_DEFRAG_CONFIRM      "Are you about to defragment the indexer database on the disk by using Windows utility ""esentutl.exe""?"
     IDS_STATUS_1            "Index is current; no indexing needed. Queries can be processed."
     IDS_STATUS_2            "Indexer is paused. This can happen either because the user paused indexing or the indexer back-off criteria have been met. Queries can be processed."
@@ -351,7 +351,7 @@ BEGIN
     IDS_STATUS_6            "Indexer is processing the notification queue. This is done before resuming any crawl."
     IDS_STATUS_7            "Indexer is shutting down and is not indexing. Indexer can't be queried."
     IDS_CLOSED              "Connection to Windows Search™ has been closed. Please press Refresh button..."
-    IDS_ADMIN               "Administrative privileges required."
+    IDS_DUPLICATE_VOLUME    "Duplicate GUID error."
 END
 
 STRINGTABLE
@@ -409,6 +409,7 @@ BEGIN
     IDS_RULE_EXCLUDE        "Exclude"
     IDS_CHECK_CONFIRM       "Are you about to check the indexer database integrity on the disk by using Windows utility ""esentutl.exe""?"
     IDS_INDEXER_CHECK       "Checking Windows Search database..."
+    IDS_SEARCH_VOLUMES      "Search volumes"
 END
 
 #endif    // Neutral (Default) resources

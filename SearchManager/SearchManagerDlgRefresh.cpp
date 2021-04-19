@@ -41,7 +41,7 @@ int CALLBACK CSearchManagerDlg::SortProc(LPARAM lParam1, LPARAM lParam2, LPARAM 
     return item1->URL.CompareNoCase( item2->URL );
 }
 
-int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
+int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid, const CString& info)
 {
 	CString key = name;
 	if ( ! IsEqualGUID( guid, GUID() ) )
@@ -56,13 +56,15 @@ int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 		return group->second;
 	}
 
-	LVGROUP grpRoots = { sizeof( LVGROUP ), LVGF_HEADER | LVGF_GROUPID,
+	LVGROUP grp = { sizeof( LVGROUP ), LVGF_HEADER| LVGF_GROUPID | ( info.IsEmpty() ? 0u : LVGF_SUBTITLE ) | LVGF_STATE,
 		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.size() ) };
-	VERIFY( m_wndList.InsertGroup( grpRoots.iGroupId, &grpRoots ) != -1 );
+	grp.pszSubtitle = const_cast< LPTSTR >( static_cast< LPCTSTR >( info ) );
+	grp.state = grp.stateMask = LVGS_COLLAPSIBLE;
+	VERIFY( m_wndList.InsertGroup( grp.iGroupId, &grp ) != -1 );
 
-	m_Groups.emplace( std::make_pair( key, grpRoots.iGroupId ) );
+	m_Groups.emplace( std::make_pair( key, grp.iGroupId ) );
 
-	return grpRoots.iGroupId;
+	return grp.iGroupId;
 }
 
 void CSearchManagerDlg::Clear()
@@ -118,6 +120,10 @@ void CSearchManagerDlg::Refresh()
 				m_sVersion = szVersion;
 				CoTaskMemFree( szVersion );
 			}
+			else
+			{
+				m_sVersion = error_t( hr );
+			}
 
 			LPWSTR szUserAgent = nullptr;
 			hr = pManager->get_UserAgent( &szUserAgent );
@@ -125,6 +131,10 @@ void CSearchManagerDlg::Refresh()
 			{
 				m_sUserAgent = szUserAgent;
 				CoTaskMemFree( szUserAgent );
+			}
+			else
+			{
+				m_sUserAgent = error_t( hr );
 			}
 
 			// Get catalog
@@ -142,19 +152,28 @@ void CSearchManagerDlg::Refresh()
 			}
 		}
 
-		// Enumerate offline roots and scopes
+		// Try to get System privileges
+		CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
+		if ( sys )
 		{
-			// Try to get System privileges
-			CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
-			if ( sys )
-			{
-				EnumerateRegistryRoots();
+			EnumerateVolumes();
+			EnumerateRegistryRoots();
+			EnumerateRegistryDefaultRules();
 
-				EnumerateRegistryDefaultRules();
-			}
+			sys.Free();
+
+			VERIFY( RevertToSelf() );
 		}
+		else
+		{
+			sys.Free();
 
-		VERIFY( RevertToSelf() );
+			VERIFY( RevertToSelf() );
+
+			EnumerateVolumes();
+			EnumerateRegistryRoots();
+			EnumerateRegistryDefaultRules();
+		}
 
 		m_wndList.SortItemsEx( &CSearchManagerDlg::SortProc, reinterpret_cast< LPARAM >( this ) );
 
@@ -306,7 +325,7 @@ HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 			}
 
 			CAutoPtr< CRoot > root( new CRoot( pScope, pRoot ) );
-			if ( *root )
+			if ( root && root->Parse() )
 			{
 				const static CString group_name = LoadString( IDS_ROOTS );
 				VERIFY( root->InsertTo( m_wndList, GetGroupId( group_name, root->Guid ) ) != -1 );
@@ -338,7 +357,7 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 			}
 
 			CAutoPtr< CRule > rule( new CRule( pScope, pRule ) );
-			if ( *rule )
+			if ( rule && rule->Parse() )
 			{
 				const static CString group_name = LoadString( IDS_RULES );
 				VERIFY( rule->InsertTo( m_wndList, GetGroupId( group_name, rule->Guid ) ) != -1 );
@@ -350,20 +369,39 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 	return hr;
 }
 
-void CSearchManagerDlg::EnumerateRegistryRoots()
+HRESULT CSearchManagerDlg::EnumerateRegistryRoots()
 {
 	const static CString group_name = LoadString( IDS_DEFAULT_ROOTS );
-	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, GROUP_ROOTS, group_name );
+
+	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, GROUP_ROOTS, group_name );
+	if ( FAILED( hr ) )
+	{
+		CAutoPtr< CItem > item( new CItem( error_t( hr ) ) );
+		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
+		m_List.push_back( item.Detach() );
+	}
+	return hr;
 }
 
-void CSearchManagerDlg::EnumerateRegistryDefaultRules()
+HRESULT CSearchManagerDlg::EnumerateRegistryDefaultRules()
 {
 	const static CString group_name = LoadString( IDS_DEFAULT_RULES );
-	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, GROUP_RULES, group_name );
-	EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
+
+	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, GROUP_RULES, group_name );
+	if ( SUCCEEDED( hr ) )
+	{
+		hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
+	}
+	if ( FAILED( hr ) )
+	{
+		CAutoPtr< CItem > item( new CItem( error_t( hr ) ) );
+		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
+		m_List.push_back( item.Detach() );
+	}
+	return hr;
 }
 
-void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName)
+HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t nGroup, const CString& sGroupName)
 {
 	TRACE( _T("EnumerateRegistry: %s\n"), szSubkey );
 
@@ -379,6 +417,11 @@ void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t n
 			res = SHEnumKeyEx( hRootsKey, i, name, &name_size );
 			if ( res != ERROR_SUCCESS )
 			{
+				// No more data
+				if ( res == ERROR_NO_MORE_ITEMS )
+				{
+					res = ERROR_SUCCESS;
+				}
 				break;
 			}
 
@@ -387,7 +430,7 @@ void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t n
 			CAutoPtr< CItem > rule( ( nGroup == GROUP_RULES ) ?
 				static_cast< CItem* >( new COfflineRule( url ) ) :
 				static_cast< CItem* >( new COfflineRoot( url ) ) );
-			if ( *rule )
+			if ( rule && rule->Parse() )
 			{
 				bool found = false;
 				for ( const auto item : m_List )
@@ -409,5 +452,33 @@ void CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_t n
 			}
 		}
 		RegCloseKey( hRootsKey );
+	}
+
+	return HRESULT_FROM_WIN32( res );
+}
+
+void CSearchManagerDlg::EnumerateVolumes()
+{
+	const static CString group_name = LoadString( IDS_SEARCH_VOLUMES );
+	const static CString dup = LoadString( IDS_DUPLICATE_VOLUME );
+
+	for ( TCHAR disk = 'A'; disk <= 'Z'; ++disk )
+	{
+		CAutoPtr< CItem > volume( static_cast< CItem* >( new CVolume( disk ) ) );
+		if ( volume && volume->Parse() )
+		{
+			// Looking for duplicates
+			for ( const auto item : m_List )
+			{
+				if ( item->Group == GROUP_VOLUMES && *item == *volume )
+				{
+					volume->SetError( dup );
+					break;
+				}
+			}
+
+			VERIFY( volume->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
+			m_List.push_back( volume.Detach() );
+		}
 	}
 }

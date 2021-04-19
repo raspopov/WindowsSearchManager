@@ -22,7 +22,7 @@
 #define IDR_INSERT_MENU                 140
 #define IDS_STATUS_7                    141
 #define IDS_CLOSED                      142
-#define IDS_ADMIN                       143
+#define IDS_DUPLICATE_VOLUME            143
 #define IDS_INDEXER_DEFRAG              144
 #define IDS_DEFAULT_ROOT                145
 #define IDS_ROOTS                       146
@@ -68,6 +68,7 @@
 #define IDS_RULE_EXCLUDE                186
 #define IDS_CHECK_CONFIRM               187
 #define IDS_INDEXER_CHECK               188
+#define IDS_SEARCH_VOLUMES              189
 #define IDC_STATUS                      1000
 #define IDC_NAME                        1001
 #define IDC_LAST_INDEXED                1003

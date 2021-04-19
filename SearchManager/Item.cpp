@@ -33,39 +33,59 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 // CItem
 
 CItem::CItem(group_t group) noexcept
-	: Group	( group )
-	, Guid	()
+	: Group			( group )
+	, Guid			()
+	, m_ParseGuid	( false )
 {
 }
 
 CItem::CItem(const CString& url, group_t group) noexcept
-	: Group	( group )
-	, URL	( url )
-	, Guid	()
+	: Group			( group )
+	, URL			( url )
+	, Guid			()
+	, m_ParseGuid	( false )
 {
 }
 
 CString CItem::GetTitle() const
 {
+	CString title;
+
 	if ( Protocol.IsEmpty() )
 	{
-		return URL;
+		title = URL;
 	}
 	else if ( User.IsEmpty() )
 	{
-		return Path;
+		title = Path;
 	}
 	else if ( Name.IsEmpty() )
 	{
-		return _T("(") + User + _T(") ") + Path;
+		title = _T("(") + User + _T(") ") + Path;
 	}
 	else
 	{
-		return Name + _T(" (") + User + _T(") ") + Path;
+		title = Name + _T(" (") + User + _T(") ") + Path;
+	}
+
+	if ( HasError() )
+	{
+		if ( title.IsEmpty() )
+		{
+			return m_Error;
+		}
+		else
+		{
+			return title + _T(" \x2192 ") + m_Error;
+		}
+	}
+	else
+	{
+		return title;
 	}
 }
 
-void CItem::ParseURL(bool bGuid)
+bool CItem::Parse()
 {
 	int begin = URL.Find( _T("://") );
 	if ( begin != -1 )
@@ -137,39 +157,30 @@ void CItem::ParseURL(bool bGuid)
 					Path = Path.Left( 3 ) + Path.Mid( 42 );
 					URL = Protocol + _T(":///") + Path;
 
-					if ( SUCCEEDED( CLSIDFromString( guid, &Guid ) ) && bGuid )
+					if ( SUCCEEDED( CLSIDFromString( guid, &Guid ) ) && m_ParseGuid )
 					{
 						// Read disk GUID if any
 						const DWORD drives = GetLogicalDrives();
 						if ( ( drives & ( 1 << ( disk_letter - 'A' ) ) ) != 0 )
 						{
-							CFile file;
-							const CString filename = Path.Left( 3 ) + INDEXER_VOLUME;
-							if ( file.Open( filename, CFile::modeRead | CFile::shareDenyNone | CFile::modeNoTruncate ) )
+							GUID disk_guid = {};
+							HRESULT hr = ReadVolumeGuid( disk_letter, disk_guid );
+							if ( SUCCEEDED( hr ) )
 							{
-								TCHAR buf[ 38 + 1 ] = {};
-								GUID disk_guid = {};
-								if ( file.Read( buf, 76 ) == 76 && SUCCEEDED( CLSIDFromString( buf, &disk_guid ) ) )
+								if ( IsEqualGUID( Guid, disk_guid ) )
 								{
 									// Clear actual GUID
-									if ( IsEqualGUID( Guid, disk_guid ) )
-									{
-										Guid = GUID();
-									}
-								}
-								else
-								{
-									TRACE( _T("Bad file format: %s\n"), (LPCTSTR)filename );
+									Guid = GUID();
 								}
 							}
 							else
 							{
-								TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)filename, GetError() );
+								SetError( error_t( hr ) );
 							}
 						}
 						else
 						{
-							TRACE( _T("Disk missed: %c:\\n"), disk_letter );
+							TRACE( _T("Disk missed: %c:\\\n"), disk_letter );
 						}
 					}
 				}
@@ -199,6 +210,35 @@ void CItem::ParseURL(bool bGuid)
 				}
 			}
 		}
+	}
+
+	return ! URL.IsEmpty();
+}
+
+HRESULT CItem::ReadVolumeGuid(TCHAR disk, GUID& guid)
+{
+	CString filename;
+	filename.Format( _T("%c:\\%s"), disk, INDEXER_VOLUME );
+
+	CFile file;
+	if ( file.Open( filename, CFile::modeRead | CFile::shareDenyNone | CFile::modeNoTruncate ) )
+	{
+		TCHAR buf[ 38 + 1 ] = {};
+		if ( file.Read( buf, 76 ) == 76 )
+		{
+			return CLSIDFromString( buf, &guid );
+		}
+		else
+		{
+			TRACE( _T("Bad file format: %s\n"), (LPCTSTR)filename );
+			return ERROR_INVALID_DATA;
+		}
+	}
+	else
+	{
+		const DWORD err = GetLastError();
+		TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)filename, GetErrorEx( err ) );
+		return HRESULT_FROM_WIN32( err );
 	}
 }
 
@@ -267,8 +307,6 @@ CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group
 
 		hr = pRoot->get_UseNotificationsOnly( &UseNotificationsOnly );
 		ASSERT( SUCCEEDED( hr ) );
-
-		ParseURL( false );
 	}
 }
 
@@ -331,6 +369,8 @@ COfflineRoot::COfflineRoot(const CString& key, group_t group)
 	: CRoot		( group )
 	, Key		( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
+	m_ParseGuid = true;
+
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
 	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
@@ -343,8 +383,6 @@ COfflineRoot::COfflineRoot(const CString& key, group_t group)
 		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("ProvidesNotifications"), &type, reinterpret_cast< LPBYTE >( &notif ), &notif_size );
 		ASSERT( res == ERROR_SUCCESS );
 		ProvidesNotifications = ( notif != 0 );
-
-		ParseURL( true );
 	}
 }
 
@@ -406,8 +444,6 @@ CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t 
 		ASSERT( SUCCEEDED( hr ) );
 
 		hr = pScope->HasChildScopeRule( URL, &HasChild );
-
-		ParseURL( false );
 	}
 }
 
@@ -452,12 +488,14 @@ HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
 	return pCatalog->ReindexMatchingURLs( URL );
 }
 
-// CDefaultRule
+// COfflineRule
 
 COfflineRule::COfflineRule(const CString& key, group_t group)
 	: CRule	( group )
 	, Key	( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
+	m_ParseGuid = true;
+
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
 	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
@@ -476,8 +514,6 @@ COfflineRule::COfflineRule(const CString& key, group_t group)
 		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Default"), &type, reinterpret_cast< LPBYTE >( &def ), &def_size );
 		ASSERT( res == ERROR_SUCCESS );
 		IsDefault = ( def != 0 );
-
-		ParseURL( true );
 	}
 }
 
@@ -502,4 +538,64 @@ HRESULT COfflineRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 		}
 	}
 	return HRESULT_FROM_WIN32( res );
+}
+
+// CVolume
+
+CVolume::CVolume(TCHAR disk, group_t group)
+	: CItem		( group )
+{
+	Path.Format( _T("%c:\\"), disk );
+}
+
+bool CVolume::Parse()
+{
+	// Check drive existence
+	const DWORD drives = GetLogicalDrives();
+	if ( ( drives & ( 1 << ( Path.GetAt( 0 ) - 'A' ) ) ) != 0 )
+	{
+		// Check drive type
+		const UINT type = GetDriveType( Path );
+		if ( type == DRIVE_FIXED || type == DRIVE_REMOVABLE )
+		{
+			URL = Path + _T(' ');
+
+			// Read GUID
+			HRESULT hr = ReadVolumeGuid( Path.GetAt( 0 ), Guid );
+			if ( SUCCEEDED( hr ) )
+			{
+				URL += StringFromGUID( Guid );
+			}
+			else
+			{
+				SetError( error_t( hr ) );
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+HRESULT CVolume::DeleteFrom(ISearchCrawlScopeManager* pScope) const
+{
+	if ( pScope )
+	{
+		return E_NOTIMPL;
+	}
+
+	// Delete GUID file from disk
+	const CString filename = Path + INDEXER_VOLUME;
+	if ( DeleteFile( filename ) )
+	{
+		return S_OK;
+	}
+
+	return HRESULT_FROM_WIN32( GetLastError() );
+}
+
+HRESULT CVolume::Reindex(ISearchCatalogManager* pCatalog) const
+{
+	const CString url = FILE_PROTOCOL _T(":///") + Path;
+
+	return pCatalog->ReindexSearchRoot( url );
 }

@@ -21,31 +21,63 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
-enum group_t { GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_OFFLINE_RULES };
+enum group_t { GROUP_NONE, GROUP_ROOTS, GROUP_OFFLINE_ROOTS, GROUP_RULES, GROUP_OFFLINE_RULES, GROUP_VOLUMES };
 
 class CItem
 {
 public:
-	CItem(group_t group) noexcept;
-	CItem(const CString& url, group_t group) noexcept;
+	CItem(group_t group = GROUP_NONE) noexcept;
+	CItem(const CString& url, group_t group = GROUP_NONE) noexcept;
 	virtual ~CItem() = default;
 
-	virtual int InsertTo(CListCtrl& list, int group_id) const;
-	virtual HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const = 0;
-	virtual HRESULT AddTo(ISearchCrawlScopeManager* pScope) const = 0;
-	virtual HRESULT Reindex(ISearchCatalogManager* pCatalog) const = 0;
+	virtual bool Parse();
 
-	operator bool() const noexcept
+	inline bool HasError() const noexcept
 	{
-		return ! URL.IsEmpty();
+		return ! m_Error.IsEmpty();
 	}
 
-	inline bool operator==(const CItem& item) const noexcept
+	virtual bool operator!=(const CItem& item) const noexcept
+	{
+		return ! operator==( item );
+	}
+
+	virtual bool operator==(const CItem& item) const noexcept
 	{
 		return IsEqualGUID( item.Guid, Guid ) && ( item.URL == URL );
 	}
 
+	virtual bool HasNonIndexDelete() const noexcept
+	{
+		return false;
+	}
+
 	virtual CString GetTitle() const;
+
+	virtual int InsertTo(CListCtrl& list, int group_id) const;
+
+	virtual HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const
+	{
+		UNUSED_ALWAYS( pScope );
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT AddTo(ISearchCrawlScopeManager* pScope) const
+	{
+		UNUSED_ALWAYS( pScope );
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT Reindex(ISearchCatalogManager* pCatalog) const
+	{
+		UNUSED_ALWAYS( pCatalog );
+		return E_NOTIMPL;
+	}
+
+	inline void SetError(const CString& error)
+	{
+		m_Error = error;
+	}
 
 	group_t	Group;				// Group type
 	CString URL;				// The pattern or URL for the rule, or the URL of the starting point for search root
@@ -55,8 +87,11 @@ public:
 	CString Path;				// Search root/scope path
 	GUID Guid;					// Search volume GUID for "file" protocol
 
+	static HRESULT ReadVolumeGuid(TCHAR disk, GUID& guid);
+
 protected:
-	void ParseURL(bool bGuid);
+	bool m_ParseGuid;			// Is GUID parsed?
+	CString m_Error;			// Has some errors
 };
 
 class CRoot : public CItem
@@ -81,6 +116,11 @@ class COfflineRoot : public CRoot
 {
 public:
 	COfflineRoot(const CString& key, group_t group = GROUP_OFFLINE_ROOTS);
+
+	bool HasNonIndexDelete() const noexcept override
+	{
+		return true;
+	}
 
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
 
@@ -109,7 +149,33 @@ class COfflineRule : public CRule
 public:
 	COfflineRule(const CString& key, group_t group = GROUP_OFFLINE_RULES);
 
+	bool HasNonIndexDelete() const noexcept override
+	{
+		return true;
+	}
+
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
 
 	CString Key;				// Registry key
+};
+
+class CVolume : public CItem
+{
+public:
+	CVolume(TCHAR disk, group_t group = GROUP_VOLUMES);
+
+	bool Parse() override;
+
+	bool operator==(const CItem& item) const noexcept override
+	{
+		return ! IsEqualGUID( Guid, GUID() ) && IsEqualGUID( item.Guid, Guid );
+	}
+
+	bool HasNonIndexDelete() const noexcept override
+	{
+		return true;
+	}
+
+	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
+	HRESULT Reindex(ISearchCatalogManager* pCatalog) const override;
 };

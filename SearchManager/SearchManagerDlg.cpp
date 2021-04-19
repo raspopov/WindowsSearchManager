@@ -213,18 +213,85 @@ void CSearchManagerDlg::Disconnect()
 	UpdateInterface();
 }
 
+BOOL CSearchManagerDlg::IsAddEnabled() const
+{
+	return static_cast< bool >( m_pScope );
+}
+
+BOOL CSearchManagerDlg::IsEditEnabled() const
+{
+	if ( POSITION pos = m_wndList.GetFirstSelectedItemPosition() )
+	{
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		if ( pos == nullptr )
+		{
+			if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
+			{
+				if ( ! item->HasError() )
+				{
+					switch ( item->Group )
+					{
+					case GROUP_ROOTS:
+					case GROUP_RULES:
+						return ( m_pScope != nullptr );
+
+					case GROUP_OFFLINE_ROOTS:
+					case GROUP_OFFLINE_RULES:
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+BOOL CSearchManagerDlg::IsDeleteEnabled() const
+{
+	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
+	{
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
+		{
+			if ( ! item->HasError() )
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+BOOL CSearchManagerDlg::IsReindexEnabled() const
+{
+	if ( ! m_pCatalog )
+	{
+		return false;
+	}
+	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
+	{
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
+		{
+			if ( ! item->HasError() )
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
 void CSearchManagerDlg::UpdateInterface()
 {
-	const BOOL bScope = static_cast< bool >( m_pScope );
-	const auto count = m_wndList.GetSelectedCount();
 	const BOOL bRunning = ( HasServiceState( INDEXER_SERVICE, SERVICE_RUNNING ) == ERROR_SUCCESS );
 
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( bRunning ? MF_GRAYED : MF_ENABLED ) );
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_STOP, MF_BYCOMMAND | ( bRunning ? MF_ENABLED : MF_GRAYED ) );
 
-	GetDlgItem( IDC_ADD )->EnableWindow( bScope );
-	GetDlgItem( IDC_EDIT )->EnableWindow( bScope && count == 1 );
-	GetDlgItem( IDC_DELETE )->EnableWindow( count > 0 );
+	GetDlgItem( IDC_ADD )->EnableWindow( IsAddEnabled() );
+	GetDlgItem( IDC_EDIT )->EnableWindow( IsEditEnabled() );
+	GetDlgItem( IDC_DELETE )->EnableWindow( IsDeleteEnabled() );
 
 	UpdateWindow();
 }
@@ -584,7 +651,7 @@ void CSearchManagerDlg::OnDelete()
 
 void CSearchManagerDlg::OnUpdateDelete(CCmdUI *pCmdUI)
 {
-	pCmdUI->Enable( m_pScope && m_wndList.GetSelectedCount() > 0 );
+	pCmdUI->Enable( IsDeleteEnabled() );
 }
 
 void CSearchManagerDlg::OnEdit()
@@ -601,7 +668,7 @@ void CSearchManagerDlg::OnEdit()
 
 void CSearchManagerDlg::OnUpdateEdit(CCmdUI *pCmdUI)
 {
-	pCmdUI->Enable( m_pScope && m_wndList.GetSelectedCount() == 1 );
+	pCmdUI->Enable( IsEditEnabled() );
 }
 
 void CSearchManagerDlg::OnReindex()
@@ -617,7 +684,7 @@ void CSearchManagerDlg::OnReindex()
 
 void CSearchManagerDlg::OnUpdateReindex(CCmdUI *pCmdUI)
 {
-	pCmdUI->Enable( m_pCatalog && m_wndList.GetSelectedCount() > 0 );
+	pCmdUI->Enable( IsReindexEnabled() );
 }
 
 void CSearchManagerDlg::OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult)
@@ -635,9 +702,15 @@ void CSearchManagerDlg::OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult)
 	case CDDS_ITEMPREPAINT:
 		if ( auto item = reinterpret_cast< const CItem* >( pNMCD->nmcd.lItemlParam ) )
 		{
-			if ( item->Group == GROUP_RULES || item->Group == GROUP_OFFLINE_RULES )
+			if ( item->HasError() )
 			{
-				pNMCD->clrTextBk = static_cast< const CRule* >( item )->IsInclude ? RGB( 192, 255, 192 ) : RGB( 255, 192, 192 );
+				// Error color (red)
+				pNMCD->clrTextBk = RGB( 255, 128, 128 );
+			}
+			else if ( item->Group == GROUP_RULES || item->Group == GROUP_OFFLINE_RULES )
+			{
+				// Include color (green) and exclude one (yellow)
+				pNMCD->clrTextBk = static_cast< const CRule* >( item )->IsInclude ? RGB( 192, 255, 192 ) : RGB( 255, 255, 192 );
 			}
 		}
 		break;

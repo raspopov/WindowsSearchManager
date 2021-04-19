@@ -82,13 +82,6 @@ struct error_t
 			msg.TrimRight( _T(" \t?!.\r\n") );
 			msg += _T(".");
 			LocalFree( lpszTemp );
-
-			if ( hr == E_ACCESSDENIED )
-			{
-				// Administrative privileges required
-				const static CString admin = _T(" ") + LoadString( IDS_ADMIN );
-				msg += admin;
-			}
 		}
 		else
 		{

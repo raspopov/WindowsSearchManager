@@ -36,8 +36,6 @@ END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
 {
-	EnableHtmlHelp();
-
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 }
 
