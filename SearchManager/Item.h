@@ -30,6 +30,12 @@ public:
 	CItem(const CString& url, group_t group = GROUP_NONE) noexcept;
 	virtual ~CItem() = default;
 
+	// Get item title for name column of list
+	virtual CString GetTitle() const;
+
+	// Get item color for list
+	virtual COLORREF GetColor() const;
+
 	virtual bool Parse();
 
 	inline bool HasError() const noexcept
@@ -44,15 +50,13 @@ public:
 
 	virtual bool operator==(const CItem& item) const noexcept
 	{
-		return IsEqualGUID( item.Guid, Guid ) && ( item.URL == URL );
+		return IsEqualGUID( item.Guid, Guid ) && ( item.NormalURL == NormalURL );
 	}
 
 	virtual bool HasNonIndexDelete() const noexcept
 	{
 		return false;
 	}
-
-	virtual CString GetTitle() const;
 
 	virtual int InsertTo(CListCtrl& list, int group_id) const;
 
@@ -81,6 +85,7 @@ public:
 
 	group_t	Group;				// Group type
 	CString URL;				// The pattern or URL for the rule, or the URL of the starting point for search root
+	CString NormalURL;			// Normalized URL
 	CString Protocol;			// Protocol name ("file", "iehistory", etc.)
 	CString Name;				// Protocol handler name
 	CString User;				// User name (SID) if any
@@ -134,6 +139,8 @@ public:
 	CRule(BOOL incl, BOOL def, const CString& url, group_t group = GROUP_RULES);
 	CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t group = GROUP_RULES);
 
+	COLORREF GetColor() const override;
+
 	int InsertTo(CListCtrl& list, int group_id) const override;
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
 	HRESULT AddTo(ISearchCrawlScopeManager* pScope) const override;
@@ -164,6 +171,10 @@ class CVolume : public CItem
 public:
 	CVolume(TCHAR disk, group_t group = GROUP_VOLUMES);
 
+	CString GetTitle() const override;
+
+	COLORREF GetColor() const override;
+
 	bool Parse() override;
 
 	bool operator==(const CItem& item) const noexcept override
@@ -178,4 +189,6 @@ public:
 
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
 	HRESULT Reindex(ISearchCatalogManager* pCatalog) const override;
+
+	BOOL HasDuplicateDUID;		// Duplicate GUID detected
 };

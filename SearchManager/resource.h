@@ -69,6 +69,7 @@
 #define IDS_CHECK_CONFIRM               187
 #define IDS_INDEXER_CHECK               188
 #define IDS_SEARCH_VOLUMES              189
+#define IDS_CONFIRM_VOLUME              190
 #define IDS_NONELEVATED                 191
 #define IDC_STATUS                      1000
 #define IDC_NAME                        1001

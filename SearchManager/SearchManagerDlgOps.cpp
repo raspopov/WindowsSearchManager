@@ -162,7 +162,7 @@ void CSearchManagerDlg::Delete()
 
 				if ( item->HasNonIndexDelete() )
 				{
-					// Try step 1 first but else skip to step 2
+					// Try step 1 first
 					if ( m_pScope )
 					{
 						HRESULT hr = item->DeleteFrom( m_pScope );
@@ -171,11 +171,7 @@ void CSearchManagerDlg::Delete()
 							hr = m_pScope->SaveAll();
 							if ( SUCCEEDED( hr ) )
 							{
-								pos = to_delete.erase( pos );
-
 								m_bRefresh = true;
-
-								continue;
 							}
 						}
 					}

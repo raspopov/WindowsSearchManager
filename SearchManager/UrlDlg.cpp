@@ -84,6 +84,13 @@ BOOL CUrlDialog::OnInitDialog()
 
 	SetWindowText( m_sTitle );
 
+	typedef LPCWSTR (WINAPI * MB_GetString_t)(UINT);
+	if ( auto MB_GetString = reinterpret_cast< MB_GetString_t >( GetProcAddress( GetModuleHandle( _T("user32") ), "MB_GetString" ) ) )
+	{
+		SetDlgItemText( IDOK, MB_GetString( IDOK - 1 ) );
+		SetDlgItemText( IDCANCEL, MB_GetString( IDCANCEL - 1 ) );
+	}
+
 	if ( auto menu = theApp.GetContextMenuManager() )
 	{
 		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_SUBMENU };

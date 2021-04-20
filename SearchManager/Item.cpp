@@ -42,6 +42,7 @@ CItem::CItem(group_t group) noexcept
 CItem::CItem(const CString& url, group_t group) noexcept
 	: Group			( group )
 	, URL			( url )
+	, NormalURL		( url )
 	, Guid			()
 	, m_ParseGuid	( false )
 {
@@ -85,8 +86,16 @@ CString CItem::GetTitle() const
 	}
 }
 
+COLORREF CItem::GetColor() const
+{
+	// Error color (red)
+	return HasError() ? RGB( 255, 128, 128 ) : 0;
+}
+
 bool CItem::Parse()
 {
+	NormalURL = URL;
+
 	int begin = URL.Find( _T("://") );
 	if ( begin != -1 )
 	{
@@ -155,7 +164,7 @@ bool CItem::Parse()
 
 					// Cut-off the GUID from the Path and URL
 					Path = Path.Left( 3 ) + Path.Mid( 42 );
-					URL = Protocol + _T(":///") + Path;
+					NormalURL = Protocol + _T(":///") + Path;
 
 					if ( SUCCEEDED( CLSIDFromString( guid, &Guid ) ) && m_ParseGuid )
 					{
@@ -220,26 +229,33 @@ HRESULT CItem::ReadVolumeGuid(TCHAR disk, GUID& guid)
 	CString filename;
 	filename.Format( _T("%c:\\%s"), disk, INDEXER_VOLUME );
 
-	CFile file;
-	if ( file.Open( filename, CFile::modeRead | CFile::shareDenyNone | CFile::modeNoTruncate ) )
+	CAtlFile file;
+	HRESULT hr = file.Create( filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, OPEN_EXISTING );
+	if ( SUCCEEDED( hr ) )
 	{
 		TCHAR buf[ 38 + 1 ] = {};
-		if ( file.Read( buf, 76 ) == 76 )
+		DWORD read = 76;
+		hr = file.Read( buf, 76, read );
+		if ( SUCCEEDED( hr ) )
 		{
-			return CLSIDFromString( buf, &guid );
-		}
-		else
-		{
+			if ( read == 76 )
+			{
+				hr = CLSIDFromString( buf, &guid );
+				if ( SUCCEEDED( hr ) )
+				{
+					return hr;
+				}
+			}
+			else
+			{
+				hr = ERROR_INVALID_DATA;
+			}
 			TRACE( _T("Bad file format: %s\n"), (LPCTSTR)filename );
-			return ERROR_INVALID_DATA;
+			return hr;
 		}
 	}
-	else
-	{
-		const DWORD err = GetLastError();
-		TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)filename, GetErrorEx( err ) );
-		return HRESULT_FROM_WIN32( err );
-	}
+	TRACE( _T("File read error \"%s\": %s\n"), (LPCTSTR)filename, (LPCTSTR)(CString)error_t( hr ) );
+	return hr;
 }
 
 int CItem::InsertTo(CListCtrl& list, int group_id) const
@@ -336,10 +352,12 @@ int CRoot::InsertTo(CListCtrl& list, int group_id) const
 
 HRESULT CRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	return pScope->RemoveRoot( URL );
+	TRACE( _T("Deleting root from scope: %s\n"), static_cast< LPCTSTR >( NormalURL ) );
+
+	return pScope->RemoveRoot( NormalURL );
 }
 
-HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope ) const
+HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope) const
 {
 	CComPtr< ISearchRoot > root;
 	HRESULT hr = root.CoCreateInstance( __uuidof( CSearchRoot ) );
@@ -360,7 +378,7 @@ HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope ) const
 
 HRESULT CRoot::Reindex(ISearchCatalogManager* pCatalog) const
 {
-	return pCatalog->ReindexSearchRoot( URL );
+	return pCatalog->ReindexSearchRoot( NormalURL );
 }
 
 // COfflineRoot
@@ -394,11 +412,29 @@ HRESULT COfflineRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 		return CRoot::DeleteFrom( pScope );
 	}
 
-	ASSERT( ! IsEqualGUID( Guid, GUID() ) );
 	ASSERT( ! Key.IsEmpty() );
 
-	// Delete from registry
-	LSTATUS res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_SEARCH_ROOTS ) + _T("\\") + Key );
+	TCHAR url[ MAX_PATH ] = {};
+	DWORD type, ulr_size;
+
+	// Checking key
+	const CString subkey = CString( KEY_SEARCH_ROOTS ) + _T("\\") + Key;
+	TRACE( _T("Deleting registry key: %s\n"), static_cast< LPCTSTR >( subkey ) );
+	ulr_size = sizeof( url );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, subkey, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		if ( URL == url )
+		{
+			// Delete from registry
+			res = SHDeleteKey( HKEY_LOCAL_MACHINE, subkey );
+		}
+		else
+		{
+			TRACE( _T("Registry key changed!\n") );
+		}
+	}
+
 	if ( res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
 	{
 		res = ERROR_SUCCESS;
@@ -447,6 +483,17 @@ CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t 
 	}
 }
 
+COLORREF CRule::GetColor() const
+{
+	if ( COLORREF color = CItem::GetColor() )
+	{
+		return color;
+	}
+
+	// Include color (green) and exclude one (yellow)
+	return IsInclude ? RGB( 192, 255, 192 ) : RGB( 255, 255, 192 );
+}
+
 int CRule::InsertTo(CListCtrl& list, int group_id) const
 {
 	LVITEM item = { LVIF_TEXT };
@@ -474,7 +521,9 @@ int CRule::InsertTo(CListCtrl& list, int group_id) const
 
 HRESULT CRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	return IsDefault ? pScope->RemoveDefaultScopeRule( URL ) : pScope->RemoveScopeRule( URL );
+	TRACE( _T("Deleting rule from scope: %s\n"), static_cast< LPCTSTR >( NormalURL ) );
+
+	return IsDefault ? pScope->RemoveDefaultScopeRule( NormalURL ) : pScope->RemoveScopeRule( NormalURL );
 }
 
 HRESULT CRule::AddTo(ISearchCrawlScopeManager* pScope ) const
@@ -485,7 +534,7 @@ HRESULT CRule::AddTo(ISearchCrawlScopeManager* pScope ) const
 
 HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
 {
-	return pCatalog->ReindexMatchingURLs( URL );
+	return pCatalog->ReindexMatchingURLs( NormalURL );
 }
 
 // COfflineRule
@@ -527,15 +576,48 @@ HRESULT COfflineRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 
 	ASSERT( ! Key.IsEmpty() );
 
-	// Delete from registry
-	LSTATUS res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_DEFAULT_RULES ) + _T("\\") + Key );
-	if ( res == ERROR_SUCCESS || res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+	TCHAR url[ MAX_PATH ] = {};
+	DWORD type, ulr_size;
+
+	// Checking key
+	CString subkey = CString( KEY_DEFAULT_RULES ) + _T("\\") + Key;
+	TRACE( _T("Deleting registry key: %s\n"), static_cast< LPCTSTR >( subkey ) );
+	ulr_size = sizeof( url );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, subkey, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
+	if ( res == ERROR_SUCCESS )
 	{
-		res = SHDeleteKey( HKEY_LOCAL_MACHINE, CString( KEY_WORKING_RULES ) + _T("\\") + Key );
-		if ( res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+		if ( URL == url )
 		{
-			res = ERROR_SUCCESS;
+			// Delete from registry
+			res = SHDeleteKey( HKEY_LOCAL_MACHINE, subkey );
 		}
+		else
+		{
+			TRACE( _T("Key changed!\n") );
+		}
+	}
+
+	// Checking key
+	subkey = CString( KEY_WORKING_RULES ) + _T("\\") + Key;
+	TRACE( _T("Deleting registry key: %s\n"), static_cast< LPCTSTR >( subkey ) );
+	ulr_size = sizeof( url );
+	res = RegQueryValueFull( HKEY_LOCAL_MACHINE, subkey, _T("URL"), &type, reinterpret_cast< LPBYTE >( url ), &ulr_size );
+	if ( res == ERROR_SUCCESS )
+	{
+		if ( URL == url )
+		{
+			// Delete from registry
+			res = SHDeleteKey( HKEY_LOCAL_MACHINE, subkey );
+		}
+		else
+		{
+			TRACE( _T("Registry key changed!\n") );
+		}
+	}
+
+	if ( res == ERROR_PATH_NOT_FOUND || res == ERROR_FILE_NOT_FOUND )
+	{
+		res = ERROR_SUCCESS;
 	}
 	return HRESULT_FROM_WIN32( res );
 }
@@ -543,9 +625,35 @@ HRESULT COfflineRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 // CVolume
 
 CVolume::CVolume(TCHAR disk, group_t group)
-	: CItem		( group )
+	: CItem				( group )
+	, HasDuplicateDUID	( FALSE )
 {
 	Path.Format( _T("%c:\\"), disk );
+}
+
+CString CVolume::GetTitle() const
+{
+	if ( HasDuplicateDUID )
+	{
+		const static CString dup = LoadString( IDS_DUPLICATE_VOLUME );
+
+		return URL + _T(" \x2192 ") + dup;
+	}
+	else
+	{
+		return CItem::GetTitle();
+	}
+}
+
+COLORREF CVolume::GetColor() const
+{
+	if ( COLORREF color = CItem::GetColor() )
+	{
+		return color;
+	}
+
+	// Duplicate color (red)
+	return HasDuplicateDUID ? RGB( 255, 128, 128 ) : 0;
 }
 
 bool CVolume::Parse()
@@ -583,14 +691,41 @@ HRESULT CVolume::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 		return E_NOTIMPL;
 	}
 
-	// Delete GUID file from disk
-	const CString filename = Path + INDEXER_VOLUME;
-	if ( DeleteFile( filename ) )
+	if ( ! HasDuplicateDUID )
 	{
-		return S_OK;
+		const static CString format = LoadString( IDS_CONFIRM_VOLUME );
+		CString msg;
+		msg.Format( format, static_cast< LPCTSTR >( Path ) );
+		if ( AfxMessageBox( msg, MB_YESNO | MB_ICONEXCLAMATION ) != IDYES )
+		{
+			return S_FALSE;
+		}
 	}
 
-	return HRESULT_FROM_WIN32( GetLastError() );
+	GUID disk_guid = {};
+	HRESULT hr = ReadVolumeGuid( Path.GetAt( 0 ), disk_guid );
+	if ( SUCCEEDED( hr ) )
+	{
+		if ( IsEqualGUID( Guid, disk_guid ) )
+		{
+			// Delete GUID file from disk
+			const CString filename = Path + INDEXER_VOLUME;
+			if ( DeleteFile( filename ) )
+			{
+				return S_OK;
+			}
+			else
+			{
+				hr = HRESULT_FROM_WIN32( GetLastError() );
+			}
+		}
+		else
+		{
+			TRACE( _T("Volume GUID changed!\n") );
+		}
+	}
+
+	return hr;
 }
 
 HRESULT CVolume::Reindex(ISearchCatalogManager* pCatalog) const

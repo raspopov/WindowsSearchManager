@@ -550,7 +550,7 @@ void CSearchManagerDlg::OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( pNMItemActivate->iItem ) ) )
 		{
-			OnEdit( item );
+			Edit( item );
 		}
 	}
 }
@@ -560,10 +560,10 @@ void CSearchManagerDlg::OnBnClickedEdit()
 	OnEdit();
 }
 
-void CSearchManagerDlg::OnEdit(const CItem* item)
+void CSearchManagerDlg::Edit(const CItem* item)
 {
 	CLock locker( &m_bInUse );
-	if ( ! locker.Lock() )
+	if ( ! locker.Lock() || item->HasError() )
 	{
 		return;
 	}
@@ -572,12 +572,15 @@ void CSearchManagerDlg::OnEdit(const CItem* item)
 	{
 	case GROUP_ROOTS:
 	case GROUP_OFFLINE_ROOTS:
-		AddRoot( item->URL );
+		AddRoot( item->NormalURL );
 		break;
 
 	case GROUP_RULES:
 	case GROUP_OFFLINE_RULES:
-		AddRule( static_cast< const CRule* >( item )->IsInclude, static_cast< const CRule* >( item )->IsDefault, item->URL );
+		if ( auto rule = static_cast< const CRule* >( item ) )
+		{
+			AddRule( rule->IsInclude, rule->IsDefault, rule->NormalURL );
+		}
 		break;
 	}
 }
@@ -663,7 +666,7 @@ void CSearchManagerDlg::OnEdit()
 		const int index = m_wndList.GetNextSelectedItem( pos );
 		if ( auto item = reinterpret_cast< const CItem* >( m_wndList.GetItemData( index ) ) )
 		{
-			OnEdit( item );
+			Edit( item );
 		}
 	}
 }
@@ -704,15 +707,9 @@ void CSearchManagerDlg::OnNMCustomdrawList(NMHDR *pNMHDR, LRESULT *pResult)
 	case CDDS_ITEMPREPAINT:
 		if ( auto item = reinterpret_cast< const CItem* >( pNMCD->nmcd.lItemlParam ) )
 		{
-			if ( item->HasError() )
+			if ( COLORREF color = item->GetColor() )
 			{
-				// Error color (red)
-				pNMCD->clrTextBk = RGB( 255, 128, 128 );
-			}
-			else if ( item->Group == GROUP_RULES || item->Group == GROUP_OFFLINE_RULES )
-			{
-				// Include color (green) and exclude one (yellow)
-				pNMCD->clrTextBk = static_cast< const CRule* >( item )->IsInclude ? RGB( 192, 255, 192 ) : RGB( 255, 255, 192 );
+				pNMCD->clrTextBk = color;
 			}
 		}
 		break;

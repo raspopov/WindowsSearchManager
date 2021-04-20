@@ -441,11 +441,11 @@ HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_
 				break;
 			}
 
-			CString url = CString( szSubkey ) + _T('\\') + name;
+			const CString key = CString( szSubkey ) + _T('\\') + name;
 
 			CAutoPtr< CItem > rule( ( nGroup == GROUP_RULES ) ?
-				static_cast< CItem* >( new COfflineRule( url ) ) :
-				static_cast< CItem* >( new COfflineRoot( url ) ) );
+				static_cast< CItem* >( new COfflineRule( key ) ) :
+				static_cast< CItem* >( new COfflineRoot( key ) ) );
 			if ( rule && rule->Parse() )
 			{
 				bool found = false;
@@ -455,6 +455,8 @@ HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_
 						 ( item->Group == GROUP_OFFLINE_RULES ) : ( item->Group == GROUP_OFFLINE_ROOTS ) ) ) &&
 						*item == *rule )
 					{
+						//TRACE( _T("Excluded same item %d: %s\n"), rule->Group, static_cast< LPCTSTR >( rule->URL ) );
+						//TRACE( _T("   because of item %d: %s\n"), item->Group, static_cast< LPCTSTR >( item->URL ) );
 						found = true;
 						break;
 					}
@@ -476,11 +478,10 @@ HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_
 void CSearchManagerDlg::EnumerateVolumes()
 {
 	const static CString group_name = LoadString( IDS_SEARCH_VOLUMES );
-	const static CString dup = LoadString( IDS_DUPLICATE_VOLUME );
 
 	for ( TCHAR disk = 'A'; disk <= 'Z'; ++disk )
 	{
-		CAutoPtr< CItem > volume( static_cast< CItem* >( new CVolume( disk ) ) );
+		CAutoPtr< CVolume > volume( new CVolume( disk ) );
 		if ( volume && volume->Parse() )
 		{
 			// Looking for duplicates
@@ -488,7 +489,7 @@ void CSearchManagerDlg::EnumerateVolumes()
 			{
 				if ( item->Group == GROUP_VOLUMES && *item == *volume )
 				{
-					volume->SetError( dup );
+					volume->HasDuplicateDUID = TRUE;
 					break;
 				}
 			}

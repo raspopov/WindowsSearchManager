@@ -181,7 +181,7 @@ protected:
 	bool StopWindowsSearch(bool& bWasStarted);
 	bool StartWindowsSearch();
 
-	void OnEdit(const CItem* item);
+	void Edit(const CItem* item);
 
 	BOOL OnInitDialog() override;
 	void DoDataExchange(CDataExchange* pDX) override;
