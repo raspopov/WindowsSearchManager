@@ -240,7 +240,8 @@ void CSearchManagerDlg::Delete()
 			// Step 2 - Delete from registry
 			if ( ! to_delete.empty() )
 			{
-				if ( StopWindowsSearch() )
+				bool bWasStarted = false;
+				if ( StopWindowsSearch( bWasStarted ) )
 				{
 					SetStatus( deleting );
 
@@ -296,10 +297,13 @@ void CSearchManagerDlg::Delete()
 
 					VERIFY( RevertToSelf() );
 
-					StartWindowsSearch();
+					if ( bWasStarted )
+					{
+						StartWindowsSearch();
 
-					// Update catalog
-					Default( false );
+						// Update catalog
+						Default( false );
+					}
 				}
 			}
 		}
@@ -405,7 +409,8 @@ void CSearchManagerDlg::Rebuild()
 	{
 		if ( AfxMessageBox( IDS_REBUILD_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
-			if ( StopWindowsSearch() )
+			bool bWasStarted = false;
+			if ( StopWindowsSearch( bWasStarted ) )
 			{
 				// Delete Windows Search directory
 				const static CString status = LoadString( IDS_INDEXER_DELETING );
@@ -435,7 +440,10 @@ void CSearchManagerDlg::Rebuild()
 
 				VERIFY( RevertToSelf() );
 
-				StartWindowsSearch();
+				if ( bWasStarted )
+				{
+					StartWindowsSearch();
+				}
 			}
 		}
 	}
@@ -466,7 +474,8 @@ void CSearchManagerDlg::DatabaseOperation(const CString& prompt, const CString& 
 	{
 		if ( AfxMessageBox( prompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
-			if ( StopWindowsSearch() )
+			bool bWasStarted = false;
+			if ( StopWindowsSearch( bWasStarted ) )
 			{
 				// Start
 				SetStatus( status );
@@ -508,7 +517,10 @@ void CSearchManagerDlg::DatabaseOperation(const CString& prompt, const CString& 
 
 				VERIFY( RevertToSelf() );
 
-				StartWindowsSearch();
+				if ( bWasStarted )
+				{
+					StartWindowsSearch();
+				}
 			}
 		}
 	}
@@ -582,7 +594,7 @@ void CSearchManagerDlg::Explore()
 	}
 }
 
-bool CSearchManagerDlg::StopWindowsSearch()
+bool CSearchManagerDlg::StopWindowsSearch(bool& bWasStarted)
 {
 	CWaitCursor wc;
 
@@ -593,7 +605,7 @@ bool CSearchManagerDlg::StopWindowsSearch()
 
 	m_bRefresh = true;
 
-	const DWORD res = StopService( INDEXER_SERVICE );
+	const DWORD res = StopService( INDEXER_SERVICE, bWasStarted );
 	if ( res == ERROR_SUCCESS )
 	{
 		SleepEx( 2000, FALSE );

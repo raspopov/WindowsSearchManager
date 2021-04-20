@@ -178,7 +178,7 @@ protected:
 	// Run Explorer for index folder
 	void Explore();
 
-	bool StopWindowsSearch();
+	bool StopWindowsSearch(bool& bWasStarted);
 	bool StartWindowsSearch();
 
 	void OnEdit(const CItem* item);

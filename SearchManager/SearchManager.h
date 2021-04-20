@@ -97,7 +97,7 @@ CString ProgIDFromProtocol(LPCTSTR szProtocol);
 CString GetSearchDirectory();
 
 // Disable and stop service
-DWORD StopService(LPCTSTR szService);
+DWORD StopService(LPCTSTR szService, bool& bWasStarted);
 
 // Enable and start service
 DWORD StartService(LPCTSTR szService);

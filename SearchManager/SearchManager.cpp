@@ -206,8 +206,10 @@ CString GetSearchDirectory()
 	return CString();
 }
 
-DWORD StopService(LPCTSTR szService)
+DWORD StopService(LPCTSTR szService, bool& bWasStarted)
 {
+	bWasStarted = false;
+
 	// Read-only access
 	DWORD res = HasServiceState( szService, SERVICE_STOPPED );
 
@@ -236,6 +238,9 @@ DWORD StopService(LPCTSTR szService)
 							res = ERROR_SUCCESS;
 							break;
 						}
+
+						bWasStarted = true;
+
 						if ( ! ControlService( service, SERVICE_CONTROL_STOP, &status ) )
 						{
 							res = GetLastError();

@@ -483,6 +483,8 @@ void CSearchManagerDlg::OnBnClickedService()
 		return;
 	}
 
+	bool bWasStarted = false;
+
 	switch ( m_btnService.m_nMenuResult )
 	{
 	case ID_SERVICE_START:
@@ -491,7 +493,7 @@ void CSearchManagerDlg::OnBnClickedService()
 		break;
 
 	case ID_SERVICE_STOP:
-		StopWindowsSearch();
+		StopWindowsSearch( bWasStarted );
 		break;
 	}
 }
