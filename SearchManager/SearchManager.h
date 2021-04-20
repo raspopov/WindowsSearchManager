@@ -75,6 +75,9 @@ protected:
 
 extern CSearchManagerApp theApp;
 
+// Check administrative rights
+BOOL IsProcessElevated();
+
 // Open registry key in 64-bit or 32-bit parts of the registry
 LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult);
 

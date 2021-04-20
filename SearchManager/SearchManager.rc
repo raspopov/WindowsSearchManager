@@ -410,6 +410,7 @@ BEGIN
     IDS_CHECK_CONFIRM       "Are you about to check the indexer database integrity on the disk by using Windows utility ""esentutl.exe""?"
     IDS_INDEXER_CHECK       "Checking Windows Search database..."
     IDS_SEARCH_VOLUMES      "Search volumes"
+    IDS_NONELEVATED         "Insufficient rights.\n\nThe program functionality will be restricted, and multiple access error messages may occur.\n\nAre you about to restart the program to enable administartor privileges instead?"
 END
 
 #endif    // Neutral (Default) resources

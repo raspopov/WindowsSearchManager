@@ -170,6 +170,22 @@ void CSearchManagerDlg::Refresh()
 
 			VERIFY( RevertToSelf() );
 
+			// Ask for administrative rights once
+			static bool check = true;
+			if ( check && ! IsProcessElevated() )
+			{
+				check = false;
+				if ( AfxMessageBox( LoadString( IDS_NONELEVATED ), MB_YESNO | MB_ICONWARNING ) == IDYES )
+				{
+					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), _T("runas"), m_sModulePath,
+						nullptr, nullptr, SW_SHOWNORMAL };
+					VERIFY( ShellExecuteEx( &sei ) );
+
+					CDialog::OnOK();
+					return;
+				}
+			}
+
 			EnumerateVolumes();
 			EnumerateRegistryRoots();
 			EnumerateRegistryDefaultRules();

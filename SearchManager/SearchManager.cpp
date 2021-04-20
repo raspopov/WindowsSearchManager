@@ -89,6 +89,28 @@ BOOL CSearchManagerApp::ProcessMessageFilter(int code, LPMSG lpMsg)
 	return CWinAppEx::ProcessMessageFilter( code, lpMsg );
 }
 
+BOOL IsProcessElevated()
+{
+	HANDLE hToken = nullptr;
+	if ( ! OpenProcessToken( GetCurrentProcess(), TOKEN_QUERY, &hToken ) )
+	{
+		TRACE( _T("OpenProcessToken error: %d\n"), GetLastError() );
+		return FALSE;
+	}
+
+	TOKEN_ELEVATION elevation = {};
+	DWORD dwSize = 0;
+	if ( ! GetTokenInformation( hToken, TokenElevation, &elevation, sizeof( elevation ), &dwSize ) )
+	{
+		TRACE( _T("GetTokenInformation error: %d\n"), GetLastError() );
+		CloseHandle( hToken );
+		return FALSE;
+	}
+
+	CloseHandle( hToken );
+	return ( elevation.TokenIsElevated != FALSE );
+}
+
 LSTATUS RegOpenKeyFull(HKEY hKey, LPCTSTR lpSubKey, REGSAM samDesired, PHKEY phkResult)
 {
 	LSTATUS res = RegOpenKeyEx( hKey, lpSubKey, 0, samDesired | KEY_WOW64_64KEY, phkResult );
