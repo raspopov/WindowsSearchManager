@@ -742,8 +742,16 @@ BOOL CSearchManagerDlg::OnDeviceChange(UINT nEventType, DWORD_PTR dwData)
 	UNUSED_ALWAYS( nEventType );
 	UNUSED_ALWAYS( dwData );
 
-	if ( m_nDrives != GetLogicalDrives() )
+	DWORD nDrives = GetLogicalDrives();
+	if ( m_nDrives != nDrives )
 	{
+		if ( m_nDrives < nDrives )
+		{
+			CWaitCursor wc;
+
+			SleepEx( 1000, FALSE );
+		}
+
 		m_bRefresh = true;
 	}
 	return TRUE;
