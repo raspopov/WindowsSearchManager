@@ -34,8 +34,10 @@ BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinAppEx)
 END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
-	: IndexerService( IsWindowsVistaOrGreater() ? _T("WSearch") : _T("CiSvc") )
+	: IsWSearchPresent ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
 {
+	IndexerService = IsWSearchPresent ? _T("WSearch") : _T("CiSvc");
+
 	GetModuleFileName( nullptr, ModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
 	ModulePath.ReleaseBuffer();
 
@@ -335,14 +337,17 @@ DWORD HasServiceState(LPCTSTR szService, DWORD dwState)
 	{
 		if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_QUERY_STATUS ) )
 		{
-			SERVICE_STATUS status = {};
-			if ( QueryServiceStatus( service, &status ) )
+			if ( dwState )
 			{
-				res = ( status.dwCurrentState == dwState ) ? ERROR_SUCCESS : ERROR_INVALID_DATA;
-			}
-			else
-			{
-				res = GetLastError();
+				SERVICE_STATUS status = {};
+				if ( QueryServiceStatus( service, &status ) )
+				{
+					res = ( status.dwCurrentState == dwState ) ? ERROR_SUCCESS : ERROR_INVALID_DATA;
+				}
+				else
+				{
+					res = GetLastError();
+				}
 			}
 			CloseServiceHandle( service );
 		}

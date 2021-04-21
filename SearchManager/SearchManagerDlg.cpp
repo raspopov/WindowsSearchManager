@@ -147,7 +147,7 @@ BOOL CSearchManagerDlg::OnInitDialog()
 		SetMenuItemInfo( m_btnAdd.m_hMenu, 0, TRUE, &mi );
 	}
 
-	if ( ! IsWindowsVistaOrGreater() )
+	if ( ! theApp.IsWSearchPresent )
 	{
 		m_btnReindex.EnableWindow( FALSE );
 		GetDlgItem( IDC_SYSINDEX )->ShowWindow( SW_HIDE );

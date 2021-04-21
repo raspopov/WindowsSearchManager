@@ -73,8 +73,9 @@ class CSearchManagerApp : public CWinAppEx
 public:
 	CSearchManagerApp();
 
-	CString IndexerService;
-	CString	ModulePath;
+	bool	IsWSearchPresent;	// Windows Search present
+	CString IndexerService;		// Search indexer service name
+	CString	ModulePath;			// Program full path
 
 protected:
 	BOOL InitInstance() override;
@@ -113,7 +114,7 @@ DWORD StopService(LPCTSTR szService, bool& bWasStarted);
 DWORD StartService(LPCTSTR szService);
 
 // Check service state
-DWORD HasServiceState(LPCTSTR szService, DWORD dwState);
+DWORD HasServiceState(LPCTSTR szService, DWORD dwState = 0);
 
 // Renumber registry keys
 LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey);
