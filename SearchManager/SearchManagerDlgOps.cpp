@@ -169,10 +169,7 @@ void CSearchManagerDlg::Delete()
 						if ( SUCCEEDED( hr ) )
 						{
 							hr = m_pScope->SaveAll();
-							if ( SUCCEEDED( hr ) )
-							{
-								m_bRefresh = true;
-							}
+							m_bRefresh = true;
 						}
 					}
 
@@ -195,15 +192,7 @@ void CSearchManagerDlg::Delete()
 						HRESULT hr = item->DeleteFrom( m_pScope );
 						if ( SUCCEEDED( hr ) )
 						{
-							const HRESULT hr_save = m_pScope->SaveAll();
-							if ( hr == S_OK || FAILED( hr_save ) )
-							{
-								hr = hr_save;
-							}
-						}
-
-						if ( hr == S_OK )
-						{
+							hr = m_pScope->SaveAll();
 							m_bRefresh = true;
 							break;
 						}
