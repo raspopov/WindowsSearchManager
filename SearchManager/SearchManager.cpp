@@ -31,12 +31,14 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #endif
 
 BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinAppEx)
-	ON_COMMAND(ID_HELP, &CWinAppEx::OnHelp)
 END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
 	: IndexerService( IsWindowsVistaOrGreater() ? _T("WSearch") : _T("CiSvc") )
 {
+	GetModuleFileName( nullptr, ModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
+	ModulePath.ReleaseBuffer();
+
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 }
 

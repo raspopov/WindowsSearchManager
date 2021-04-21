@@ -72,6 +72,7 @@ public:
 	CSearchManagerApp();
 
 	CString IndexerService;
+	CString	ModulePath;
 
 protected:
 	BOOL InitInstance() override;

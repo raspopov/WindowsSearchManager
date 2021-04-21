@@ -41,8 +41,6 @@ CSearchManagerDlg::CSearchManagerDlg(CWnd* pParent /*=NULL*/)
 	, m_bInUse		( false )
 	, m_nDrives		( 0 )
 {
-	GetModuleFileName( nullptr, m_sModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
-	m_sModulePath.ReleaseBuffer();
 }
 
 void CSearchManagerDlg::DoDataExchange(CDataExchange* pDX)
@@ -94,13 +92,13 @@ BOOL CSearchManagerDlg::OnInitDialog()
 
 	// Load version from .exe-file properties
 	DWORD dwSize = 0;
-	dwSize = GetFileVersionInfoSize( m_sModulePath, &dwSize );
+	dwSize = GetFileVersionInfoSize( theApp.ModulePath, &dwSize );
 	if ( dwSize )
 	{
 		CAutoVectorPtr< BYTE >pBuffer( new BYTE[ dwSize ] );
 		if ( pBuffer )
 		{
-			if ( GetFileVersionInfo( m_sModulePath, 0, dwSize, pBuffer ) )
+			if ( GetFileVersionInfo( theApp.ModulePath, 0, dwSize, pBuffer ) )
 			{
 				VS_FIXEDFILEINFO* pTable = nullptr;
 				UINT nInfoSize = 0;
@@ -767,7 +765,7 @@ BOOL CSearchManagerDlg::OnHelpInfo(HELPINFO* pHelpInfo)
 
 	CWaitCursor wc;
 
-	const CString help = m_sModulePath.Left( static_cast< int >( PathFindFileName( m_sModulePath ) - m_sModulePath ) ) + _T("Readme.html");
+	const CString help = theApp.ModulePath.Left( static_cast< int >( PathFindFileName( theApp.ModulePath ) - theApp.ModulePath ) ) + _T("Readme.html");
 	SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, help, nullptr, nullptr, SW_SHOWNORMAL };
 	ShellExecuteEx( &sei );
 

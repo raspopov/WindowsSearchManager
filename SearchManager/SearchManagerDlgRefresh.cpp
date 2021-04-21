@@ -186,7 +186,7 @@ void CSearchManagerDlg::Refresh()
 				check = false;
 				if ( AfxMessageBox( LoadString( IDS_NONELEVATED ), MB_YESNO | MB_ICONWARNING ) == IDYES )
 				{
-					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), _T("runas"), m_sModulePath,
+					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), _T("runas"), theApp.ModulePath,
 						nullptr, nullptr, SW_SHOWNORMAL };
 					VERIFY( ShellExecuteEx( &sei ) );
 
