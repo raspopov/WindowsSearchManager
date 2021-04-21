@@ -352,9 +352,10 @@ int CRoot::InsertTo(CListCtrl& list, int group_id) const
 
 HRESULT CRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	TRACE( _T("Deleting root from scope: %s\n"), static_cast< LPCTSTR >( NormalURL ) );
-
-	return pScope->RemoveRoot( NormalURL );
+	const HRESULT hr = pScope->RemoveRoot( NormalURL );
+	TRACE( _T("Deleting root from scope: \"%s\" : %s\n"),
+		static_cast< LPCTSTR >( NormalURL ), static_cast< LPCTSTR >( static_cast< CString >( error_t( hr ) ) ) );
+	return hr;
 }
 
 HRESULT CRoot::AddTo(ISearchCrawlScopeManager* pScope) const
@@ -521,9 +522,12 @@ int CRule::InsertTo(CListCtrl& list, int group_id) const
 
 HRESULT CRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 {
-	TRACE( _T("Deleting rule from scope: %s\n"), static_cast< LPCTSTR >( NormalURL ) );
-
-	return IsDefault ? pScope->RemoveDefaultScopeRule( NormalURL ) : pScope->RemoveScopeRule( NormalURL );
+	const HRESULT hr1 = pScope->RemoveDefaultScopeRule( NormalURL );
+	const HRESULT hr2 = pScope->RemoveScopeRule( NormalURL );
+	const HRESULT hr = SUCCEEDED( hr1 ) ? hr1 : hr2;
+	TRACE( _T("Deleting %s rule from scope: \"%s\" : %s\n"), ( IsDefault ? _T("Default") : _T("User") ),
+		static_cast< LPCTSTR >( NormalURL ), static_cast< LPCTSTR >( static_cast< CString >( error_t( hr ) ) ) );
+	return hr;
 }
 
 HRESULT CRule::AddTo(ISearchCrawlScopeManager* pScope ) const
