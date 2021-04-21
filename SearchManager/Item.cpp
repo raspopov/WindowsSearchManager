@@ -77,7 +77,7 @@ CString CItem::GetTitle() const
 		}
 		else
 		{
-			return title + _T(" \x2192 ") + m_Error;
+			return title + ARROW + m_Error;
 		}
 	}
 	else
@@ -637,7 +637,7 @@ CString CVolume::GetTitle() const
 	{
 		const static CString dup = LoadString( IDS_DUPLICATE_VOLUME );
 
-		return URL + _T(" \x2192 ") + dup;
+		return URL + ARROW + dup;
 	}
 	else
 	{

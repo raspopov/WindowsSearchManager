@@ -52,6 +52,8 @@ inline CString StringFromGUID(REFGUID guid)
 #include "Error.h"
 
 #define CRLF				_T("\r\n")
+#define ARROW				_T(" \x2192 ")
+
 #define CATALOG_NAME		_T("SystemIndex")
 #define DEFAULT_PROTOCOL	_T("defaultroot")
 #define FILE_PROTOCOL		_T("file")

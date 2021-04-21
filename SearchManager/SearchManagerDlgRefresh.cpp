@@ -401,7 +401,8 @@ HRESULT CSearchManagerDlg::EnumerateRegistryRoots()
 	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, GROUP_ROOTS, group_name );
 	if ( FAILED( hr ) )
 	{
-		CAutoPtr< CItem > item( new CItem( error_t( hr ) ) );
+		CAutoPtr< CItem > item( new CItem() );
+		item->SetError(  LoadString( IDS_REGISTRY_ERROR ) + KEY_SEARCH_ROOTS + ARROW + error_t( hr ) );
 		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
 		m_List.push_back( item.Detach() );
 	}
@@ -413,16 +414,23 @@ HRESULT CSearchManagerDlg::EnumerateRegistryDefaultRules()
 	const static CString group_name = LoadString( IDS_DEFAULT_RULES );
 
 	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, GROUP_RULES, group_name );
-	if ( SUCCEEDED( hr ) )
-	{
-		hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
-	}
 	if ( FAILED( hr ) )
 	{
-		CAutoPtr< CItem > item( new CItem( error_t( hr ) ) );
+		CAutoPtr< CItem > item( new CItem() );
+		item->SetError( LoadString( IDS_REGISTRY_ERROR ) + KEY_DEFAULT_RULES + ARROW + error_t( hr ) );
 		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
 		m_List.push_back( item.Detach() );
 	}
+
+	hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
+	if ( FAILED( hr ) )
+	{
+		CAutoPtr< CItem > item( new CItem() );
+		item->SetError( LoadString( IDS_REGISTRY_ERROR ) + KEY_WORKING_RULES + ARROW + error_t( hr ) );
+		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
+		m_List.push_back( item.Detach() );
+	}
+
 	return hr;
 }
 
