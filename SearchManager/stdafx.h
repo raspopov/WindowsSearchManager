@@ -45,6 +45,7 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <shlobj.h>
 #include <tlhelp32.h>
 #include <winsvc.h>
+#include <VersionHelpers.h>
 
 #define SECURITY_WIN32
 #include <security.h>

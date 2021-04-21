@@ -35,6 +35,7 @@ BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinAppEx)
 END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
+	: IndexerService( IsWindowsVistaOrGreater() ? _T("WSearch") : _T("CiSvc") )
 {
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 }

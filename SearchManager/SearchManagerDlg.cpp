@@ -90,7 +90,7 @@ BOOL CSearchManagerDlg::OnInitDialog()
 {
 	CDialogExSized::OnInitDialog();
 
-	SetWindowText( LoadString( AFX_IDS_APP_TITLE ) );
+	SetWindowText( LoadString( AFX_IDS_APP_TITLE ) + _T(" ") + BITNESS );
 
 	// Load version from .exe-file properties
 	DWORD dwSize = 0;
@@ -107,7 +107,8 @@ BOOL CSearchManagerDlg::OnInitDialog()
 				if ( VerQueryValue( pBuffer, _T("\\"), reinterpret_cast< LPVOID* >( &pTable ), &nInfoSize ) )
 				{
 					CString version;
-					version.Format( _T("v.%u.%u.%u.%u"), HIWORD( pTable->dwFileVersionMS ),
+					version.Format( _T("v.%u.%u.%u.%u"),
+						HIWORD( pTable->dwFileVersionMS ),
 						LOWORD( pTable->dwFileVersionMS ),
 						HIWORD( pTable->dwFileVersionLS ),
 						LOWORD( pTable->dwFileVersionLS ) );
@@ -146,6 +147,12 @@ BOOL CSearchManagerDlg::OnInitDialog()
 		m_btnAdd.m_hMenu = GetSubMenu( menu->GetMenuById( IDR_ADD_MENU ), 0 );
 		MENUITEMINFO mi = { sizeof( MENUITEMINFO ), MIIM_STATE, 0, MFS_DEFAULT };
 		SetMenuItemInfo( m_btnAdd.m_hMenu, 0, TRUE, &mi );
+	}
+
+	if ( ! IsWindowsVistaOrGreater() )
+	{
+		m_btnReindex.EnableWindow( FALSE );
+		GetDlgItem( IDC_SYSINDEX )->ShowWindow( SW_HIDE );
 	}
 
 	ReSize();
@@ -284,7 +291,7 @@ BOOL CSearchManagerDlg::IsReindexEnabled() const
 
 void CSearchManagerDlg::UpdateInterface()
 {
-	const BOOL bRunning = ( HasServiceState( INDEXER_SERVICE, SERVICE_RUNNING ) == ERROR_SUCCESS );
+	const BOOL bRunning = ( HasServiceState( theApp.IndexerService, SERVICE_RUNNING ) == ERROR_SUCCESS );
 
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( bRunning ? MF_GRAYED : MF_ENABLED ) );
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_STOP, MF_BYCOMMAND | ( bRunning ? MF_ENABLED : MF_GRAYED ) );

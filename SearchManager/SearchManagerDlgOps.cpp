@@ -601,7 +601,7 @@ bool CSearchManagerDlg::StopWindowsSearch(bool& bWasStarted)
 
 	m_bRefresh = true;
 
-	const DWORD res = StopService( INDEXER_SERVICE, bWasStarted );
+	const DWORD res = StopService( theApp.IndexerService, bWasStarted );
 	if ( res == ERROR_SUCCESS )
 	{
 		SleepEx( 2000, FALSE );
@@ -624,7 +624,7 @@ bool CSearchManagerDlg::StartWindowsSearch()
 
 	m_bRefresh = true;
 
-	const DWORD res = StartService( INDEXER_SERVICE );
+	const DWORD res = StartService( theApp.IndexerService );
 	if ( res == ERROR_SUCCESS )
 	{
 		SleepEx( 250, FALSE );

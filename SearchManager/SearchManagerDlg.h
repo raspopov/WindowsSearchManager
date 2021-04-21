@@ -99,7 +99,7 @@ protected:
 	CString			m_sModulePath;
 
 	// Get list group by name and GUID creating a new one if missed
-	int GetGroupId(const CString& name, REFGUID guid = GUID(), const CString& info = CString());
+	int GetGroupId(const CString& name, REFGUID guid = GUID());
 
 	// Update interface items
 	void UpdateInterface();

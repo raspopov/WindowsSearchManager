@@ -23,6 +23,12 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #include "resource.h"
 
+#ifndef _WIN64
+	#define BITNESS _T("32-bit")
+#else
+	#define BITNESS _T("64-bit")
+#endif
+
 inline CString LoadString(UINT nID)
 {
 	CString str;
@@ -47,7 +53,6 @@ inline CString StringFromGUID(REFGUID guid)
 
 #define CRLF				_T("\r\n")
 #define CATALOG_NAME		_T("SystemIndex")
-#define INDEXER_SERVICE		_T("WSearch")
 #define DEFAULT_PROTOCOL	_T("defaultroot")
 #define FILE_PROTOCOL		_T("file")
 
@@ -65,6 +70,8 @@ class CSearchManagerApp : public CWinAppEx
 {
 public:
 	CSearchManagerApp();
+
+	CString IndexerService;
 
 protected:
 	BOOL InitInstance() override;

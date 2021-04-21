@@ -41,7 +41,7 @@ int CALLBACK CSearchManagerDlg::SortProc(LPARAM lParam1, LPARAM lParam2, LPARAM 
     return item1->URL.CompareNoCase( item2->URL );
 }
 
-int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid, const CString& info)
+int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid)
 {
 	CString key = name;
 	if ( ! IsEqualGUID( guid, GUID() ) )
@@ -56,10 +56,19 @@ int CSearchManagerDlg::GetGroupId(const CString& name, REFGUID guid, const CStri
 		return group->second;
 	}
 
-	LVGROUP grp = { sizeof( LVGROUP ), LVGF_HEADER| LVGF_GROUPID | ( info.IsEmpty() ? 0u : LVGF_SUBTITLE ) | LVGF_STATE,
-		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ), 0, nullptr, 0, static_cast< int >( m_Groups.size() ) };
-	grp.pszSubtitle = const_cast< LPTSTR >( static_cast< LPCTSTR >( info ) );
-	grp.state = grp.stateMask = LVGS_COLLAPSIBLE;
+	LVGROUP grp =
+	{
+		sizeof( LVGROUP ),
+		LVGF_HEADER| LVGF_GROUPID | LVGF_STATE,
+		const_cast< LPTSTR >( static_cast< LPCTSTR >( key ) ),
+		0,
+		nullptr,
+		0,
+		static_cast< int >( m_Groups.size() ),
+		( IsWindowsVistaOrGreater() ? LVGS_COLLAPSIBLE : 0u ),
+		( IsWindowsVistaOrGreater() ? LVGS_COLLAPSIBLE : 0u )
+	};
+	VERIFY( m_wndList.EnableGroupView( TRUE ) != -1 );
 	VERIFY( m_wndList.InsertGroup( grp.iGroupId, &grp ) != -1 );
 
 	m_Groups.emplace( std::make_pair( key, grp.iGroupId ) );
