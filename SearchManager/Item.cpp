@@ -673,14 +673,20 @@ bool CVolume::Parse()
 			if ( SUCCEEDED( hr ) )
 			{
 				URL += StringFromGUID( Guid );
+				return true;
+			}
+			else if ( hr == HRESULT_FROM_WIN32( ERROR_PATH_NOT_FOUND ) || hr == HRESULT_FROM_WIN32( ERROR_FILE_NOT_FOUND ) )
+			{
+				// No file
 			}
 			else
 			{
 				SetError( error_t( hr ) );
+				return true;
 			}
-			return true;
 		}
 	}
+
 	return false;
 }
 
