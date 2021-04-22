@@ -297,12 +297,7 @@ CRoot::CRoot(BOOL notif, const CString& url, group_t group)
 {
 }
 
-CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group)
-	: CItem					( group )
-	, IncludedInCrawlScope	( FALSE )
-	, IsHierarchical		( FALSE )
-	, ProvidesNotifications	( FALSE )
-	, UseNotificationsOnly	( FALSE )
+HRESULT CRoot::Load(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot)
 {
 	LPWSTR szURL = nullptr;
 	HRESULT hr = pRoot->get_RootURL( &szURL );
@@ -323,7 +318,14 @@ CRoot::CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group
 
 		hr = pRoot->get_UseNotificationsOnly( &UseNotificationsOnly );
 		ASSERT( SUCCEEDED( hr ) );
+
+		if ( ! Parse() )
+		{
+			hr = E_FAIL;
+		}
 	}
+
+	return hr;
 }
 
 int CRoot::InsertTo(CListCtrl& list, int group_id) const
@@ -384,11 +386,15 @@ HRESULT CRoot::Reindex(ISearchCatalogManager* pCatalog) const
 
 // COfflineRoot
 
-COfflineRoot::COfflineRoot(const CString& key, group_t group)
+COfflineRoot::COfflineRoot(group_t group)
 	: CRoot		( group )
-	, Key		( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
 	m_ParseGuid = true;
+}
+
+HRESULT COfflineRoot::Load(const CString& key)
+{
+	Key	= key.Mid( key.ReverseFind( _T('\\') ) + 1 );
 
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -402,7 +408,14 @@ COfflineRoot::COfflineRoot(const CString& key, group_t group)
 		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("ProvidesNotifications"), &type, reinterpret_cast< LPBYTE >( &notif ), &notif_size );
 		ASSERT( res == ERROR_SUCCESS );
 		ProvidesNotifications = ( notif != 0 );
+
+		if ( ! Parse() )
+		{
+			return E_FAIL;
+		}
 	}
+
+	return HRESULT_FROM_WIN32( res );
 }
 
 HRESULT COfflineRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
@@ -440,6 +453,7 @@ HRESULT COfflineRoot::DeleteFrom(ISearchCrawlScopeManager* pScope) const
 	{
 		res = ERROR_SUCCESS;
 	}
+
 	return HRESULT_FROM_WIN32( res );
 }
 
@@ -461,11 +475,7 @@ CRule::CRule(BOOL incl, BOOL def, const CString& url, group_t group)
 {
 }
 
-CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t group)
-	: CItem		( group )
-	, IsInclude	( FALSE )
-	, IsDefault	( FALSE )
-	, HasChild	( FALSE )
+HRESULT CRule::Load(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule)
 {
 	LPWSTR szURL = nullptr;
 	HRESULT hr = pRule->get_PatternOrURL( &szURL );
@@ -481,7 +491,15 @@ CRule::CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t 
 		ASSERT( SUCCEEDED( hr ) );
 
 		hr = pScope->HasChildScopeRule( URL, &HasChild );
+		ASSERT( SUCCEEDED( hr ) );
+
+		if ( ! Parse() )
+		{
+			hr = E_FAIL;
+		}
 	}
+
+	return hr;
 }
 
 COLORREF CRule::GetColor() const
@@ -543,11 +561,15 @@ HRESULT CRule::Reindex(ISearchCatalogManager* pCatalog) const
 
 // COfflineRule
 
-COfflineRule::COfflineRule(const CString& key, group_t group)
+COfflineRule::COfflineRule(group_t group)
 	: CRule	( group )
-	, Key	( key.Mid( key.ReverseFind( _T('\\') ) + 1 ) )
 {
 	m_ParseGuid = true;
+}
+
+HRESULT COfflineRule::Load(const CString& key)
+{
+	Key	= key.Mid( key.ReverseFind( _T('\\') ) + 1 );
 
 	TCHAR url[ MAX_PATH ] = {};
 	DWORD type, ulr_size = sizeof( url );
@@ -567,7 +589,14 @@ COfflineRule::COfflineRule(const CString& key, group_t group)
 		res = RegQueryValueFull( HKEY_LOCAL_MACHINE, key, _T("Default"), &type, reinterpret_cast< LPBYTE >( &def ), &def_size );
 		ASSERT( res == ERROR_SUCCESS );
 		IsDefault = ( def != 0 );
+
+		if ( ! Parse() )
+		{
+			return E_FAIL;
+		}
 	}
+
+	return HRESULT_FROM_WIN32( res );
 }
 
 HRESULT COfflineRule::DeleteFrom(ISearchCrawlScopeManager* pScope) const

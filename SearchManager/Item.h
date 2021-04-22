@@ -27,7 +27,7 @@ class CItem
 {
 public:
 	CItem(group_t group = GROUP_NONE) noexcept;
-	CItem(const CString& url, group_t group = GROUP_NONE) noexcept;
+	CItem(const CString& url, group_t group) noexcept;
 	virtual ~CItem() = default;
 
 	// Get item title for name column of list
@@ -36,7 +36,12 @@ public:
 	// Get item color for list
 	virtual COLORREF GetColor() const;
 
-	virtual bool Parse();
+	// Loading from registry key
+	virtual HRESULT Load(const CString& key)
+	{
+		UNUSED_ALWAYS( key );
+		return E_NOTIMPL;
+	}
 
 	inline bool HasError() const noexcept
 	{
@@ -97,6 +102,8 @@ public:
 protected:
 	bool m_ParseGuid;			// Is GUID parsed?
 	CString m_Error;			// Has some errors
+
+	virtual bool Parse();
 };
 
 class CRoot : public CItem
@@ -104,7 +111,8 @@ class CRoot : public CItem
 public:
 	CRoot(group_t group = GROUP_ROOTS);
 	CRoot(BOOL notif, const CString& url, group_t group = GROUP_ROOTS);
-	CRoot(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot, group_t group = GROUP_ROOTS);
+
+	HRESULT Load(ISearchCrawlScopeManager* pScope, ISearchRoot* pRoot);
 
 	int InsertTo(CListCtrl& list, int group_id) const override;
 	HRESULT DeleteFrom(ISearchCrawlScopeManager* pScope) const override;
@@ -120,7 +128,9 @@ public:
 class COfflineRoot : public CRoot
 {
 public:
-	COfflineRoot(const CString& key, group_t group = GROUP_OFFLINE_ROOTS);
+	COfflineRoot(group_t group = GROUP_OFFLINE_ROOTS);
+
+	HRESULT Load(const CString& key) override;
 
 	bool HasNonIndexDelete() const noexcept override
 	{
@@ -137,7 +147,8 @@ class CRule : public CItem
 public:
 	CRule(group_t group = GROUP_RULES);
 	CRule(BOOL incl, BOOL def, const CString& url, group_t group = GROUP_RULES);
-	CRule(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule, group_t group = GROUP_RULES);
+
+	HRESULT Load(ISearchCrawlScopeManager* pScope, ISearchScopeRule* pRule);
 
 	COLORREF GetColor() const override;
 
@@ -154,7 +165,9 @@ public:
 class COfflineRule : public CRule
 {
 public:
-	COfflineRule(const CString& key, group_t group = GROUP_OFFLINE_RULES);
+	COfflineRule(group_t group = GROUP_OFFLINE_RULES);
+
+	HRESULT Load(const CString& key) override;
 
 	bool HasNonIndexDelete() const noexcept override
 	{

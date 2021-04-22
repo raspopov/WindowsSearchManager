@@ -349,12 +349,17 @@ HRESULT CSearchManagerDlg::EnumerateRoots(ISearchCrawlScopeManager* pScope)
 				break;
 			}
 
-			CAutoPtr< CRoot > root( new CRoot( pScope, pRoot ) );
-			if ( root && root->Parse() )
+			CAutoPtr< CRoot > root( new CRoot );
+			hr = root->Load( pScope, pRoot );
+			if ( SUCCEEDED( hr ) )
 			{
 				const static CString group_name = LoadString( IDS_ROOTS );
 				VERIFY( root->InsertTo( m_wndList, GetGroupId( group_name, root->Guid ) ) != -1 );
 				m_List.push_back( root.Detach() );
+			}
+			else
+			{
+				TRACE( _T("Root load error: %s\n"), static_cast< LPCTSTR >( static_cast< CString >( error_t( hr ) ) ) );
 			}
 		}
 	}
@@ -381,12 +386,17 @@ HRESULT CSearchManagerDlg::EnumerateScopeRules(ISearchCrawlScopeManager* pScope)
 				break;
 			}
 
-			CAutoPtr< CRule > rule( new CRule( pScope, pRule ) );
-			if ( rule && rule->Parse() )
+			CAutoPtr< CRule > rule( new CRule );
+			hr = rule->Load( pScope, pRule );
+			if ( SUCCEEDED( hr ) )
 			{
 				const static CString group_name = LoadString( IDS_RULES );
 				VERIFY( rule->InsertTo( m_wndList, GetGroupId( group_name, rule->Guid ) ) != -1 );
 				m_List.push_back( rule.Detach() );
+			}
+			else
+			{
+				TRACE( _T("Rule load error: %s\n"), static_cast< LPCTSTR >( static_cast< CString >( error_t( hr ) ) ) );
 			}
 		}
 	}
@@ -401,7 +411,7 @@ HRESULT CSearchManagerDlg::EnumerateRegistryRoots()
 	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_SEARCH_ROOTS, GROUP_ROOTS, group_name );
 	if ( FAILED( hr ) )
 	{
-		CAutoPtr< CItem > item( new CItem() );
+		CAutoPtr< CItem > item( new CItem );
 		item->SetError(  LoadString( IDS_REGISTRY_ERROR ) + KEY_SEARCH_ROOTS + ARROW + error_t( hr ) );
 		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
 		m_List.push_back( item.Detach() );
@@ -416,7 +426,7 @@ HRESULT CSearchManagerDlg::EnumerateRegistryDefaultRules()
 	HRESULT hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_DEFAULT_RULES, GROUP_RULES, group_name );
 	if ( FAILED( hr ) )
 	{
-		CAutoPtr< CItem > item( new CItem() );
+		CAutoPtr< CItem > item( new CItem );
 		item->SetError( LoadString( IDS_REGISTRY_ERROR ) + KEY_DEFAULT_RULES + ARROW + error_t( hr ) );
 		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
 		m_List.push_back( item.Detach() );
@@ -425,7 +435,7 @@ HRESULT CSearchManagerDlg::EnumerateRegistryDefaultRules()
 	hr = EnumerateRegistry( HKEY_LOCAL_MACHINE, KEY_WORKING_RULES, GROUP_RULES, group_name );
 	if ( FAILED( hr ) )
 	{
-		CAutoPtr< CItem > item( new CItem() );
+		CAutoPtr< CItem > item( new CItem );
 		item->SetError( LoadString( IDS_REGISTRY_ERROR ) + KEY_WORKING_RULES + ARROW + error_t( hr ) );
 		VERIFY( item->InsertTo( m_wndList, GetGroupId( group_name ) ) != -1 );
 		m_List.push_back( item.Detach() );
@@ -461,9 +471,10 @@ HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_
 			const CString key = CString( szSubkey ) + _T('\\') + name;
 
 			CAutoPtr< CItem > rule( ( nGroup == GROUP_RULES ) ?
-				static_cast< CItem* >( new COfflineRule( key ) ) :
-				static_cast< CItem* >( new COfflineRoot( key ) ) );
-			if ( rule && rule->Parse() )
+				static_cast< CItem* >( new COfflineRule() ) :
+				static_cast< CItem* >( new COfflineRoot() ) );
+			HRESULT hr = rule->Load( key );
+			if ( SUCCEEDED( hr ) )
 			{
 				bool found = false;
 				for ( const auto item : m_List )
@@ -484,6 +495,10 @@ HRESULT CSearchManagerDlg::EnumerateRegistry(HKEY hKey, LPCTSTR szSubkey, group_
 					VERIFY( rule->InsertTo( m_wndList, GetGroupId( sGroupName, rule->Guid ) ) != -1 );
 					m_List.push_back( rule.Detach() );
 				}
+			}
+			else
+			{
+				TRACE( _T("Registry load error: %s\n"), static_cast< LPCTSTR >( static_cast< CString >( error_t( hr ) ) ) );
 			}
 		}
 		RegCloseKey( hRootsKey );
