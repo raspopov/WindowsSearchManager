@@ -34,12 +34,64 @@ BEGIN_MESSAGE_MAP(CSearchManagerApp, CWinAppEx)
 END_MESSAGE_MAP()
 
 CSearchManagerApp::CSearchManagerApp()
-	: IsWSearchPresent ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
+	: IsWSearchPresent ( false )
 {
-	IndexerService = IsWSearchPresent ? _T("WSearch") : _T("CiSvc");
+	if ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
+	{
+		IsWSearchPresent = true;
+		IndexerService = _T("WSearch");
+	}
+	else if ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
+	{
+		IndexerService = _T("CiSvc");
+	}
 
 	GetModuleFileName( nullptr, ModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
 	ModulePath.ReleaseBuffer();
+
+	LPTSTR sys = SystemDirectory.GetBuffer( MAX_PATH );
+	GetSystemDirectory( sys, MAX_PATH );
+	SystemDirectory.ReleaseBuffer();
+	if ( SystemDirectory.GetAt( SystemDirectory.GetLength() - 1 ) != _T('\\') )
+	{
+		SystemDirectory += _T('\\');
+	}
+
+	DWORD type, folder_size = MAX_PATH * sizeof( TCHAR );
+	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type,
+		reinterpret_cast< LPBYTE >( SearchDirectory.GetBuffer( MAX_PATH ) ), &folder_size );
+	SearchDirectory.ReleaseBuffer();
+	if ( res == ERROR_SUCCESS )
+	{
+		if ( SearchDirectory.GetAt( SearchDirectory.GetLength() - 1 ) != _T('\\') )
+		{
+			SearchDirectory += _T('\\');
+		}
+
+		CString expanded;
+		res = ExpandEnvironmentStrings( SearchDirectory, expanded.GetBuffer( MAX_PATH ), MAX_PATH );
+		expanded.ReleaseBuffer();
+		if ( res )
+		{
+			SearchDirectory = expanded;
+		}
+
+		DWORD attr = GetFileAttributes( SearchDirectory );
+		if ( attr != INVALID_FILE_ATTRIBUTES )
+		{
+			SearchDatabase = SearchDirectory + _T("Applications\\Windows\\Windows.edb");
+
+			attr = GetFileAttributes( SearchDatabase );
+			if ( attr == INVALID_FILE_ATTRIBUTES )
+			{
+				SearchDatabase.Empty();
+			}
+		}
+		else
+		{
+			SearchDirectory.Empty();
+		}
+	}
 
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
 }
@@ -185,27 +237,6 @@ CString ProgIDFromProtocol(LPCTSTR szProtocol)
 	if ( res == ERROR_SUCCESS )
 	{
 		return progid;
-	}
-
-	return CString();
-}
-
-CString GetSearchDirectory()
-{
-	TCHAR folder[ MAX_PATH ] = {};
-	DWORD type, folder_size = sizeof( folder );
-	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size );
-	if ( res == ERROR_SUCCESS )
-	{
-		PathAddBackslash( folder );
-
-		TCHAR expanded[ MAX_PATH ] = {};
-		if ( ExpandEnvironmentStrings( folder, expanded, MAX_PATH ) )
-		{
-			return expanded;
-		}
-
-		return folder;
 	}
 
 	return CString();
@@ -391,8 +422,8 @@ LSTATUS RegRenumberKeys(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpNumberKey)
 					break;
 				}
 
-				const DWORD number = static_cast< DWORD >( _tstol( name ) );
-				if ( errno != 0 || number > 1000 )
+				DWORD number = 0;
+				if ( _stscanf_s( name, _T("%u"), &number ) != 1 )
 				{
 					TRACE( _T("Abort. Found non-number key: %s\n"), name );
 					res = ERROR_INVALID_DATA;

@@ -70,6 +70,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}";	Filename: "{uninstallexe}"
 Filename: "{app}\{#MyAppExe}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall runasoriginaluser
 
 [UninstallDelete]
+Name: "{app}\*.RAW"; Type: files
 Name: "{app}"; Type: dirifempty
 Name: "{pf}\{#MyAppPublisher}"; Type: dirifempty
 Name: "{localappdata}\{#MyAppPublisher}\{#MyAppName}"; Type: filesandordirs

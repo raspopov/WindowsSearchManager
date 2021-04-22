@@ -76,6 +76,9 @@ public:
 	bool	IsWSearchPresent;	// Windows Search present
 	CString IndexerService;		// Search indexer service name
 	CString	ModulePath;			// Program full path
+	CString SystemDirectory;	// Windows system directory path
+	CString SearchDirectory;	// Windows Search directory path
+	CString SearchDatabase;		// Windows Search database path
 
 protected:
 	BOOL InitInstance() override;
@@ -103,9 +106,6 @@ LSTATUS RegSetValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, DWORD dwTy
 
 // Get Windows Search protocol handler ProgID
 CString ProgIDFromProtocol(LPCTSTR szProtocol);
-
-// Get Windows Search directory
-CString GetSearchDirectory();
 
 // Disable and stop service
 DWORD StopService(LPCTSTR szService, bool& bWasStarted);

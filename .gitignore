@@ -24,3 +24,4 @@ ipch/
 *.sap
 packages
 *.exe
+*.RAW

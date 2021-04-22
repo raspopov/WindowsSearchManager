@@ -389,8 +389,7 @@ void CSearchManagerDlg::Reset()
 
 void CSearchManagerDlg::Rebuild()
 {
-	CString folder = GetSearchDirectory();
-	if ( ! folder.IsEmpty() )
+	if ( ! theApp.SearchDirectory.IsEmpty() )
 	{
 		if ( AfxMessageBox( IDS_REBUILD_CONFIRM, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
@@ -407,9 +406,10 @@ void CSearchManagerDlg::Rebuild()
 					// Try to get System privileges
 					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
+					CString folder = theApp.SearchDirectory;
 					folder.AppendChar( 0 ); // double null terminated for SHFileOperation
 					SHFILEOPSTRUCT fop = { GetSafeHwnd(), FO_DELETE, static_cast< LPCTSTR >( folder ), nullptr, FOF_ALLOWUNDO | FOF_NOCONFIRMATION };
-					if ( GetFileAttributes( folder ) == INVALID_FILE_ATTRIBUTES || SHFileOperation( &fop ) == 0 )
+					if ( SHFileOperation( &fop ) == 0 )
 					{
 						// Set an option to revert to initial state
 						const DWORD zero = 0;
@@ -438,24 +438,21 @@ void CSearchManagerDlg::Defrag()
 {
 	const static CString prompt = LoadString( IDS_DEFRAG_CONFIRM );
 	const static CString status = LoadString( IDS_INDEXER_DEFRAG );
-	DatabaseOperation( prompt, status, _T("/d") );
+	const CString options = _T("/k ") + theApp.SystemDirectory + _T("esentutl.exe /d \"") + theApp.SearchDatabase + _T("\" /o");
+	DatabaseOperation( prompt, status, options );
 }
 
 void CSearchManagerDlg::Check()
 {
 	const static CString prompt = LoadString( IDS_CHECK_CONFIRM );
 	const static CString status = LoadString( IDS_INDEXER_CHECK );
-	DatabaseOperation( prompt, status, _T("/g") );
+	const CString options = _T("/k del /q /f log.INTEG.RAW && ") + theApp.SystemDirectory + _T("esentutl.exe /g \"") + theApp.SearchDatabase + _T("\" /o /flog && notepad log.INTEG.RAW");
+	DatabaseOperation( prompt, status, options );
 }
 
 void CSearchManagerDlg::DatabaseOperation(const CString& prompt, const CString& status, const CString& options)
 {
-	CString system_dir;
-	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
-	system_dir.ReleaseBuffer();
-
-	CString folder = GetSearchDirectory();
-	if ( ! folder.IsEmpty() )
+	if ( ! theApp.SearchDatabase.IsEmpty() )
 	{
 		if ( AfxMessageBox( prompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 		{
@@ -471,12 +468,10 @@ void CSearchManagerDlg::DatabaseOperation(const CString& prompt, const CString& 
 					// Try to get System privileges
 					CAutoPtr< CAsProcess >sys( CAsProcess::RunAsTrustedInstaller() );
 
-					const CString cmd = system_dir + _T("\\cmd.exe");
-					const CString params = _T("/k ") + system_dir + _T("\\esentutl.exe ") + options +
-						_T(" \"") + folder + _T("Applications\\Windows\\Windows.edb\" /o");
+					const CString cmd = theApp.SystemDirectory + _T("cmd.exe");
 
 					SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC,
-						GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
+						GetSafeHwnd(), nullptr, cmd, options, nullptr, SW_SHOWNORMAL };
 					if ( ShellExecuteEx( &sei ) && sei.hProcess )
 					{
 						// Wait for termination
@@ -554,19 +549,14 @@ void CSearchManagerDlg::Default(bool bInteractive)
 
 void CSearchManagerDlg::Explore()
 {
-	CString system_dir;
-	GetSystemDirectory( system_dir.GetBuffer( MAX_PATH ), MAX_PATH );
-	system_dir.ReleaseBuffer();
-
-	const CString folder = GetSearchDirectory();
-	if ( ! folder.IsEmpty() )
+	if ( ! theApp.SearchDirectory.IsEmpty() )
 	{
 		CWaitCursor wc;
 
-		const CString cmd = system_dir + _T("\\cmd.exe");
-		const CString params = CString( _T("/k cd /d \"") ) + folder + _T("Applications\\Windows\\\" && dir");
+		const CString cmd = theApp.SystemDirectory + _T("cmd.exe");
+		const CString params = CString( _T("/k cd /d \"") ) + theApp.SearchDirectory + _T("\" && cd \"Applications\\Windows\" && dir");
 
-		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd, params, system_dir, SW_SHOWNORMAL };
+		SHELLEXECUTEINFO sei = { sizeof( SHELLEXECUTEINFO ), SEE_MASK_DEFAULT, GetSafeHwnd(), nullptr, cmd, params, nullptr, SW_SHOWNORMAL };
 		if ( ShellExecuteEx( &sei ) )
 		{
 			SleepEx( 500, FALSE );
