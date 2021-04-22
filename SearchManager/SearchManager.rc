@@ -311,8 +311,8 @@ IDR_SERVICE_MENU MENU
 BEGIN
     POPUP "0"
     BEGIN
-        MENUITEM "Start Windows Search service", ID_SERVICE_START
-        MENUITEM "Stop Windows Search service", ID_SERVICE_STOP
+        MENUITEM "Start indexer service",       ID_SERVICE_START
+        MENUITEM "Stop indexer service",        ID_SERVICE_STOP
     END
 END
 
@@ -388,16 +388,16 @@ BEGIN
     IDS_DEFAULT_ROOTS       "Search roots (offline)"
     IDS_DEFAULT_RULES       "Search scope rules (offline)"
     IDS_REBUILD_CONFIRM     "Are you about to rebuild the index by removing database from the disk and reverting it to the initial state?"
-    IDS_INDEXER_STOP_ERROR  "Windows Search service (WSearch) failed to stop."
-    IDS_INDEXER_START_ERROR "Windows Search service (WSearch) failed to start."
-    IDS_INDEXER_STOPPING    "Stoping Windows Search service..."
-    IDS_INDEXER_STARTING    "Starting Windows Search service..."
+    IDS_INDEXER_STOP_ERROR  "Indexer service failed to stop."
+    IDS_INDEXER_START_ERROR "Indexer service failed to start."
+    IDS_INDEXER_STOPPING    "Stopping indexer service..."
+    IDS_INDEXER_STARTING    "Starting indexer service..."
 END
 
 STRINGTABLE
 BEGIN
-    IDS_INDEXER_REG_ERROR   "Failed to change Windows Search registry key."
-    IDS_INDEXER_DELETING    "Deleting Windows Search directory..."
+    IDS_INDEXER_REG_ERROR   "Failed to change indexer registry key."
+    IDS_INDEXER_DELETING    "Deleting indexer directory..."
     IDS_ROOT_IN_SCOPE       "In scope"
     IDS_ROOT_HIER           "Hierarchical"
     IDS_ROOT_NOTIFY         "Notify"
