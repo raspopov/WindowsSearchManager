@@ -84,13 +84,16 @@ void CSearchManagerDlg::Clear()
 	m_wndList.RemoveAllGroups();
 	m_Groups.clear();
 
-	m_sUserAgent.Empty();
-	m_sVersion.Empty();
+	m_sUserAgent.reset();
+	m_sVersion.reset();
+	m_sEnableFindMyFiles.reset();
+	m_sDiacriticSensitivity.reset();
 }
 
 void CSearchManagerDlg::Refresh()
 {
 	HRESULT hr = S_OK;
+	CString sStatus;
 
 	CLock locker( &m_bInUse );
 	if ( ! locker.Lock() )
@@ -126,30 +129,41 @@ void CSearchManagerDlg::Refresh()
 			hr = pManager->GetIndexerVersionStr( &szVersion );
 			if ( SUCCEEDED( hr ) )
 			{
-				m_sVersion = szVersion;
+				m_sVersion.emplace( szVersion );
 				CoTaskMemFree( szVersion );
 			}
 			else
 			{
-				m_sVersion = error_t( hr );
+				m_sVersion.emplace( error_t( hr ) );
 			}
 
 			LPWSTR szUserAgent = nullptr;
 			hr = pManager->get_UserAgent( &szUserAgent );
 			if ( SUCCEEDED( hr ) )
 			{
-				m_sUserAgent = szUserAgent;
+				m_sUserAgent.emplace( szUserAgent );
 				CoTaskMemFree( szUserAgent );
 			}
 			else
 			{
-				m_sUserAgent = error_t( hr );
+				m_sUserAgent.emplace( error_t( hr ) );
 			}
 
 			// Get catalog
 			hr = pManager->GetCatalog( CATALOG_NAME, &m_pCatalog );
 			if ( SUCCEEDED( hr ) )
 			{
+				BOOL diacritic = FALSE;
+				hr = m_pCatalog->get_DiacriticSensitivity( &diacritic );
+				if ( SUCCEEDED( hr ) )
+				{
+					m_sDiacriticSensitivity.emplace( diacritic ? _T("Yes") : _T("No") );
+				}
+				else
+				{
+					m_sDiacriticSensitivity.emplace( error_t( hr ) );
+				}
+
 				// Get scope
 				hr = m_pCatalog->GetCrawlScopeManager( &m_pScope );
 				if ( SUCCEEDED( hr ) )
@@ -216,18 +230,62 @@ void CSearchManagerDlg::Refresh()
 
 			Disconnect();
 		}
+
+		DWORD value = 0;
+		DWORD value_size = sizeof( DWORD ), type;
+		LRESULT res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_GATHER, _T("EnableFindMyFiles"), &type, reinterpret_cast< LPBYTE >( &value ), &value_size );
+		if ( res == ERROR_SUCCESS )
+		{
+			m_sEnableFindMyFiles.emplace( value ? _T("Yes") : _T("No") );
+		}
+		else if ( res != ERROR_FILE_NOT_FOUND && res != ERROR_PATH_NOT_FOUND )
+		{
+			m_sEnableFindMyFiles.emplace( GetErrorEx( static_cast< DWORD >( res ) ) );
+		}
 	}
 
-	CString sStatus;
-
-	if ( ! m_sUserAgent.IsEmpty() )
+	if ( m_sUserAgent )
 	{
-		sStatus += _T("User agent\t\t: ") + m_sUserAgent + CRLF;
+		sStatus += _T("User agent\t\t: ");
+		sStatus += m_sUserAgent.value();
+		sStatus += CRLF;
 	}
 
-	if ( ! m_sVersion.IsEmpty() )
+	if ( m_sVersion )
 	{
-		sStatus += _T("Indexer version\t\t: ") + m_sVersion + CRLF;
+		sStatus += _T("Indexer version\t\t: ");
+		sStatus += m_sVersion.value();
+		sStatus += CRLF;
+	}
+
+	if ( m_sEnableFindMyFiles )
+	{
+		sStatus += _T("\"Find My Files\"\t\t: ");
+		sStatus += m_sEnableFindMyFiles.value();
+		sStatus += CRLF;
+	}
+
+	if ( m_sDiacriticSensitivity )
+	{
+		sStatus += _T("Diacritic sensitivity\t: ");
+		sStatus += m_sDiacriticSensitivity.value();
+		sStatus += CRLF;
+	}
+
+	if ( theApp.SearchDatabase )
+	{
+		WIN32_FILE_ATTRIBUTE_DATA wfad = {};
+		if ( GetFileAttributesEx( theApp.SearchDatabase.value(), GetFileExInfoStandard, &wfad ) )
+		{
+			const ULARGE_INTEGER size = { { wfad.nFileSizeLow, wfad.nFileSizeHigh } };
+			TCHAR database_size[ 16 ] = {};
+			if ( StrFormatByteSize64( size.QuadPart, database_size, 16 ) )
+			{
+				sStatus += _T("Database size\t\t: ");
+				sStatus += database_size;
+				sStatus += CRLF;
+			}
+		}
 	}
 
 	if ( m_pCatalog )
@@ -237,13 +295,6 @@ void CSearchManagerDlg::Refresh()
 		if ( SUCCEEDED( hr ) )
 		{
 			sStatus.AppendFormat( _T("Total items\t\t: %ld") CRLF, numitems );
-
-			BOOL diacritic = FALSE;
-			hr = m_pCatalog->get_DiacriticSensitivity( &diacritic );
-			if ( SUCCEEDED( hr ) )
-			{
-				sStatus.AppendFormat( _T("Diacritic sensitivity\t: %s") CRLF, ( diacritic ? _T("yes") : _T("no") ) );
-			}
 
 			LONG pendingitems = 0, queued = 0, highpri = 0;
 			hr = m_pCatalog->NumberOfItemsToIndex( &pendingitems, &queued, &highpri );
@@ -293,11 +344,24 @@ void CSearchManagerDlg::Refresh()
 							LoadString( IDS_REASON_9 ),
 							LoadString( IDS_REASON_10 )
 						};
-						sStatus += CRLF CRLF;
+						sStatus += CRLF;
 						sStatus += reasons[ static_cast< int >( reason ) - 1 ];
 					}
 				}
 			}
+		}
+
+		LPWSTR szIndex = nullptr;
+		HRESULT hrIndex = m_pCatalog->URLBeingIndexed( &szIndex );
+		if ( SUCCEEDED( hrIndex ) )
+		{
+			SetIndex( szIndex );
+			CoTaskMemFree( szIndex );
+		}
+		else
+		{
+			const error_t result( hrIndex );
+			SetIndex( result );
 		}
 
 		if ( SUCCEEDED( hr ) )
@@ -310,22 +374,6 @@ void CSearchManagerDlg::Refresh()
 			SetStatus( result.msg + CRLF CRLF + result.error );
 
 			Disconnect();
-		}
-	}
-
-	if ( m_pCatalog )
-	{
-		LPWSTR szIndex = nullptr;
-		hr = m_pCatalog->URLBeingIndexed( &szIndex );
-		if ( SUCCEEDED( hr ) )
-		{
-			SetIndex( szIndex );
-			CoTaskMemFree( szIndex );
-		}
-		else
-		{
-			const error_t result( hr );
-			SetIndex( result );
 		}
 	}
 }

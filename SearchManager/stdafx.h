@@ -67,10 +67,11 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 #include <afxvisualmanagerwindows.h>
 #include <afxeditbrowsectrl.h>
 
-#include <set>
-#include <vector>
 #include <list>
 #include <map>
+#include <optional>
+#include <set>
+#include <vector>
 
 #ifdef _UNICODE
 #if defined _M_IX86

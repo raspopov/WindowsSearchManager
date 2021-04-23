@@ -87,15 +87,18 @@ protected:
 	CString			m_sIndexCache;
 	bool			m_bInUse;
 	bool			m_bRefresh;
-	CString			m_sUserAgent;
-	CString			m_sVersion;
+
+	std::optional< CString >	m_sUserAgent;
+	std::optional< CString >	m_sVersion;
+	std::optional< CString >	m_sEnableFindMyFiles;
+	std::optional< CString >	m_sDiacriticSensitivity;
 
 	CComPtr< ISearchCatalogManager >	m_pCatalog;
 	CComPtr< ISearchCrawlScopeManager >	m_pScope;
 
-	std::list< CItem* >	m_List;
-	std::map< CString, int > m_Groups;
-	DWORD			m_nDrives;
+	std::list< CItem* >			m_List;
+	std::map< CString, int >	m_Groups;
+	DWORD						m_nDrives;
 
 	// Get list group by name and GUID creating a new one if missed
 	int GetGroupId(const CString& name, REFGUID guid = GUID());

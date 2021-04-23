@@ -288,14 +288,15 @@ BOOL CSearchManagerDlg::IsReindexEnabled() const
 
 void CSearchManagerDlg::UpdateInterface()
 {
-	const BOOL bRunning = ! theApp.IndexerService.IsEmpty() && ( HasServiceState( theApp.IndexerService, SERVICE_RUNNING ) == ERROR_SUCCESS );
+	const BOOL bRunning = theApp.IndexerService && ( HasServiceState( theApp.IndexerService.value(), SERVICE_RUNNING ) == ERROR_SUCCESS );
 
-	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( ( theApp.IndexerService.IsEmpty() || bRunning ) ? MF_GRAYED : MF_ENABLED ) );
+	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_START, MF_BYCOMMAND | ( ( theApp.IndexerService && ! bRunning ) ? MF_ENABLED : MF_GRAYED ) );
 	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_STOP, MF_BYCOMMAND | ( bRunning ? MF_ENABLED : MF_GRAYED ) );
+	EnableMenuItem( m_btnService.m_hMenu, ID_SERVICE_RESTART, MF_BYCOMMAND | ( theApp.IndexerService ? MF_ENABLED : MF_GRAYED ) );
 
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_CHECK, MF_BYCOMMAND | ( theApp.SearchDatabase.IsEmpty() ? MF_GRAYED : MF_ENABLED ) );
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_DEFRAG, MF_BYCOMMAND | ( theApp.SearchDatabase.IsEmpty() ? MF_GRAYED : MF_ENABLED ) );
-	EnableMenuItem( m_btnReindex.m_hMenu, ID_EXPLORE, MF_BYCOMMAND | ( theApp.SearchDirectory.IsEmpty() ? MF_GRAYED : MF_ENABLED ) );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_CHECK, MF_BYCOMMAND | ( theApp.SearchDatabase ? MF_ENABLED : MF_GRAYED ) );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_DEFRAG, MF_BYCOMMAND | ( theApp.SearchDatabase ? MF_ENABLED : MF_GRAYED ) );
+	EnableMenuItem( m_btnReindex.m_hMenu, ID_EXPLORE, MF_BYCOMMAND | ( theApp.SearchDirectory ? MF_ENABLED : MF_GRAYED ) );
 
 	GetDlgItem( IDC_ADD )->EnableWindow( IsAddEnabled() );
 	GetDlgItem( IDC_EDIT )->EnableWindow( IsEditEnabled() );

@@ -61,7 +61,8 @@ inline CString StringFromGUID(REFGUID guid)
 #define INDEXER_VOLUME		_T("System Volume Information\\IndexerVolumeGuid")
 
 #define KEY_SEARCH			_T("SOFTWARE\\Microsoft\\Windows Search")
-#define KEY_PROTOCOLS		KEY_SEARCH _T("\\Gather\\Windows\\SystemIndex\\Protocols")
+#define KEY_GATHER			KEY_SEARCH _T("\\Gather\\Windows\\SystemIndex")
+#define KEY_PROTOCOLS		KEY_GATHER _T("\\Protocols")
 #define KEY_SEARCH_ROOTS	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\SearchRoots")
 #define KEY_DEFAULT_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\DefaultRules")
 #define KEY_WORKING_RULES	KEY_SEARCH _T("\\CrawlScopeManager\\Windows\\SystemIndex\\WorkingSetRules")
@@ -73,12 +74,12 @@ class CSearchManagerApp : public CWinAppEx
 public:
 	CSearchManagerApp();
 
-	bool	IsWSearchPresent;	// Windows Search present
-	CString IndexerService;		// Search indexer service name
-	CString	ModulePath;			// Program full path
-	CString SystemDirectory;	// Windows system directory path
-	CString SearchDirectory;	// Windows Search directory path
-	CString SearchDatabase;		// Windows Search database path
+	bool						IsWSearchPresent;	// Windows Search present
+	std::optional< CString >	IndexerService;		// Search indexer service name
+	CString						ModulePath;			// Program full path
+	CString						SystemDirectory;	// Windows system directory path
+	std::optional< CString >	SearchDirectory;	// Windows Search directory path
+	std::optional< CString >	SearchDatabase;		// Windows Search database path
 
 protected:
 	BOOL InitInstance() override;

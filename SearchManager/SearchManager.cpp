@@ -39,57 +39,55 @@ CSearchManagerApp::CSearchManagerApp()
 	if ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
 	{
 		IsWSearchPresent = true;
-		IndexerService = _T("WSearch");
+		IndexerService.emplace( _T("WSearch") );
 	}
-	else if ( HasServiceState( _T("WSearch") ) == ERROR_SUCCESS )
+	else if ( HasServiceState( _T("CiSvc") ) == ERROR_SUCCESS )
 	{
-		IndexerService = _T("CiSvc");
+		IndexerService.emplace( _T("CiSvc") );
 	}
 
 	GetModuleFileName( nullptr, ModulePath.GetBuffer( MAX_PATH ), MAX_PATH );
 	ModulePath.ReleaseBuffer();
 
-	LPTSTR sys = SystemDirectory.GetBuffer( MAX_PATH );
-	GetSystemDirectory( sys, MAX_PATH );
+	GetSystemDirectory( SystemDirectory.GetBuffer( MAX_PATH ), MAX_PATH );
 	SystemDirectory.ReleaseBuffer();
+
 	if ( SystemDirectory.GetAt( SystemDirectory.GetLength() - 1 ) != _T('\\') )
 	{
 		SystemDirectory += _T('\\');
 	}
 
+	TCHAR folder[ MAX_PATH ] = {};
 	DWORD type, folder_size = MAX_PATH * sizeof( TCHAR );
-	LSTATUS res = RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type,
-		reinterpret_cast< LPBYTE >( SearchDirectory.GetBuffer( MAX_PATH ) ), &folder_size );
-	SearchDirectory.ReleaseBuffer();
-	if ( res == ERROR_SUCCESS )
+	if ( RegQueryValueFull( HKEY_LOCAL_MACHINE, KEY_SEARCH, _T("DataDirectory"), &type, reinterpret_cast< LPBYTE >( folder ), &folder_size ) == ERROR_SUCCESS )
 	{
-		if ( SearchDirectory.GetAt( SearchDirectory.GetLength() - 1 ) != _T('\\') )
+		PathAddBackslash( folder );
+
+		SearchDirectory.emplace( folder );
+
+		TCHAR expanded[ MAX_PATH ] = {};
+		if ( ExpandEnvironmentStrings( SearchDirectory.value(), expanded, MAX_PATH ) )
 		{
-			SearchDirectory += _T('\\');
+			PathAddBackslash( expanded );
+
+			SearchDirectory.emplace( expanded  );
 		}
 
-		CString expanded;
-		res = ExpandEnvironmentStrings( SearchDirectory, expanded.GetBuffer( MAX_PATH ), MAX_PATH );
-		expanded.ReleaseBuffer();
-		if ( res )
-		{
-			SearchDirectory = expanded;
-		}
-
-		DWORD attr = GetFileAttributes( SearchDirectory );
+		// Check folders for existence
+		DWORD attr = GetFileAttributes( SearchDirectory.value() );
 		if ( attr != INVALID_FILE_ATTRIBUTES )
 		{
-			SearchDatabase = SearchDirectory + _T("Applications\\Windows\\Windows.edb");
+			SearchDatabase.emplace( SearchDirectory.value() + _T("Applications\\Windows\\Windows.edb") );
 
-			attr = GetFileAttributes( SearchDatabase );
+			attr = GetFileAttributes( SearchDatabase.value() );
 			if ( attr == INVALID_FILE_ATTRIBUTES )
 			{
-				SearchDatabase.Empty();
+				SearchDatabase.reset();
 			}
 		}
 		else
 		{
-			SearchDirectory.Empty();
+			SearchDirectory.reset();
 		}
 	}
 
