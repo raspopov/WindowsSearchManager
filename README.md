@@ -13,8 +13,9 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
 
 - Fine tuning of indexed locations (add, edit, delete) including deleting of orphan ones (on unavailable disks)
 - Bulk operations
-- Direct control of Windows Search™ engine
+- Direct control of Windows Search™ engine (start, stop, restart)
 - Database checking and defragmentation (Windows.edb file)
+- Scanning of search volumes GUIDs for duplicates (for example in case of improper disk cloning)
 - Nifty context menu
 
 ### Hotkeys
@@ -26,7 +27,7 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
 
 ## System Requirements
 
-- Windows Vista or later, 32 or 64-bit.
+- Windows XP or later, 32 or 64-bit.
 - Microsoft Visual C++ 2015-2019 Redistributables ([32-bit](https://aka.ms/vs/15/release/VC_redist.x86.exe)/[64-bit](https://aka.ms/vs/15/release/VC_redist.x64.exe)).
 - Administrator rights optional but highly recommended.
 
@@ -40,7 +41,7 @@ Utility to manage a [Windows Search™](https://en.wikipedia.org/wiki/Windows_Se
   - Microsoft.VisualStudio.Component.NuGet
 - Windows 10 SDK 10.0.17763
 - NuGet packages (automatically installed):
-  - InnoSetup 6.1.2
+  - InnoSetup 5.6.1
   - Pandoc 2.1.0
 
 ## Licenses
