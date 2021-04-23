@@ -313,6 +313,7 @@ BEGIN
     BEGIN
         MENUITEM "Start indexer service",       ID_SERVICE_START
         MENUITEM "Stop indexer service",        ID_SERVICE_STOP
+        MENUITEM "Restart indexer service",     ID_SERVICE_RESTART
     END
 END
 

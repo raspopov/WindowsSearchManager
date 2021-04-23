@@ -496,12 +496,18 @@ void CSearchManagerDlg::OnBnClickedService()
 	switch ( m_btnService.m_nMenuResult )
 	{
 	case ID_SERVICE_START:
-	default:
 		StartWindowsSearch();
 		break;
 
 	case ID_SERVICE_STOP:
 		StopWindowsSearch( bWasStarted );
+		break;
+
+	case ID_SERVICE_RESTART:
+		if ( StopWindowsSearch( bWasStarted ) )
+		{
+			StartWindowsSearch();
+		}
 		break;
 	}
 }
