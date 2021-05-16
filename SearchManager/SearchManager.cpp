@@ -240,7 +240,7 @@ CString ProgIDFromProtocol(LPCTSTR szProtocol)
 	return CString();
 }
 
-DWORD StopService(LPCTSTR szService, bool& bWasStarted)
+DWORD StopService(LPCTSTR szService, bool& bWasStarted, bool bDisable)
 {
 	bWasStarted = false;
 
@@ -252,10 +252,10 @@ DWORD StopService(LPCTSTR szService, bool& bWasStarted)
 	{
 		if ( SC_HANDLE scm = OpenSCManager( nullptr, nullptr, SC_MANAGER_ALL_ACCESS ) )
 		{
-			if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_STOP | SERVICE_QUERY_STATUS | SERVICE_CHANGE_CONFIG ) )
+			if ( SC_HANDLE service = OpenService( scm, szService, SERVICE_STOP | SERVICE_QUERY_STATUS | ( bDisable ? SERVICE_CHANGE_CONFIG : 0 ) | SERVICE_ENUMERATE_DEPENDENTS ) )
 			{
-				if ( ChangeServiceConfig( service, SERVICE_NO_CHANGE, SERVICE_DISABLED, SERVICE_NO_CHANGE,
-					nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr ) )
+				if ( bDisable == false ||
+					ChangeServiceConfig( service, SERVICE_NO_CHANGE, SERVICE_DISABLED, SERVICE_NO_CHANGE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr ) )
 				{
 					// Try to stop service for 10 seconds
 					res = ERROR_TIMEOUT;
@@ -278,7 +278,31 @@ DWORD StopService(LPCTSTR szService, bool& bWasStarted)
 						if ( ! ControlService( service, SERVICE_CONTROL_STOP, &status ) )
 						{
 							res = GetLastError();
+
+							// Check and stop all dependent services
+							if ( res == ERROR_DEPENDENT_SERVICES_RUNNING )
+							{
+								DWORD dwBytesNeeded = 0, dwCount = 0;
+								if ( ! EnumDependentServices( service, SERVICE_ACTIVE, nullptr, 0, &dwBytesNeeded, &dwCount ) )
+								{
+									res = GetLastError();
+									if ( res == ERROR_MORE_DATA )
+									{
+										CAutoVectorPtr< char > buf( new char[ dwBytesNeeded ] );
+										LPENUM_SERVICE_STATUS lpDependencies = reinterpret_cast< LPENUM_SERVICE_STATUS >( static_cast< char * >( buf ) );
+										if ( EnumDependentServices( service, SERVICE_ACTIVE, lpDependencies, dwBytesNeeded, &dwBytesNeeded, &dwCount ) )
+										{
+											for ( DWORD j = 0; j < dwCount; ++j )
+											{
+												bool started = false;
+												StopService( lpDependencies[ j ].lpServiceName, started, false );
+											}
+										}
+									}
+								}
+							}
 						}
+
 						SleepEx( 250 , FALSE );
 					}
 				}

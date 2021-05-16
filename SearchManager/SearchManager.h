@@ -109,7 +109,7 @@ LSTATUS RegSetValueFull(HKEY hKey, LPCTSTR lpSubKey, LPCTSTR lpValue, DWORD dwTy
 CString ProgIDFromProtocol(LPCTSTR szProtocol);
 
 // Disable and stop service
-DWORD StopService(LPCTSTR szService, bool& bWasStarted);
+DWORD StopService(LPCTSTR szService, bool& bWasStarted, bool bDisable = true);
 
 // Enable and start service
 DWORD StartService(LPCTSTR szService);
