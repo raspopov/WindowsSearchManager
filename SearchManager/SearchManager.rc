@@ -77,8 +77,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,2,0,0
- PRODUCTVERSION 2,2,0,0
+ FILEVERSION 2,3,0,0
+ PRODUCTVERSION 2,3,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -96,12 +96,12 @@ BEGIN
             VALUE "Comments", "https://github.com/raspopov/WindowsSearchManager"
             VALUE "CompanyName", "Raspopov"
             VALUE "FileDescription", "Utility to manage a Windows Search™ internals."
-            VALUE "FileVersion", "2.2.0.0"
+            VALUE "FileVersion", "2.3.0.0"
             VALUE "InternalName", "Search Manager"
             VALUE "LegalCopyright", "Copyright © 2012-2021 Nikolay Raspopov"
             VALUE "OriginalFilename", "SearchManager.exe"
             VALUE "ProductName", "Search Manager"
-            VALUE "ProductVersion", "2.2.0.0"
+            VALUE "ProductVersion", "2.3.0.0"
         END
     END
     BLOCK "VarFileInfo"
