@@ -156,6 +156,7 @@ void CSearchManagerDlg::Delete()
 			SetStatus( deleting );
 
 			// Step 1 - Delete from Windows Search
+			bool deleted = false;
 			for ( auto pos = to_delete.begin(); pos != to_delete.end(); )
 			{
 				const auto item = *pos;
@@ -168,8 +169,7 @@ void CSearchManagerDlg::Delete()
 						HRESULT hr = item->DeleteFrom( m_pScope );
 						if ( SUCCEEDED( hr ) )
 						{
-							hr = m_pScope->SaveAll();
-							m_bRefresh = true;
+							deleted = true;
 						}
 					}
 
@@ -192,8 +192,7 @@ void CSearchManagerDlg::Delete()
 						HRESULT hr = item->DeleteFrom( m_pScope );
 						if ( SUCCEEDED( hr ) )
 						{
-							hr = m_pScope->SaveAll();
-							m_bRefresh = true;
+							deleted = true;
 							break;
 						}
 						else
@@ -220,6 +219,13 @@ void CSearchManagerDlg::Delete()
 						}
 					}
 				}
+			}
+
+			if ( deleted )
+			{
+				m_pScope->SaveAll();
+
+				m_bRefresh = true;
 			}
 
 			// Step 2 - Delete from registry
