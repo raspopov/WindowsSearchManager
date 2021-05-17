@@ -65,4 +65,4 @@ along with this program.If not, see <http://www.gnu.org/licenses/>.
 
 ## Thanks
 
-[![PVS-Studio](https://pvs-studio.com/static/img/footer-unic.png)](https://pvs-studio.com/)
+[![PVS-Studio](https://import.viva64.com/docx/pages-docx/inspections_ru/image1.png)](https://pvs-studio.com/)
