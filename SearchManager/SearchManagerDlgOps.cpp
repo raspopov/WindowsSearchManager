@@ -64,6 +64,9 @@ void CSearchManagerDlg::AddRoot(const CString& sURL)
 			hr = root.AddTo( m_pScope );
 			if ( SUCCEEDED( hr ) )
 			{
+				const static CString saving_all = LoadString( IDS_SAVING_ALL );
+				SetStatus( saving_all );
+
 				const HRESULT hr_save = m_pScope->SaveAll();
 				if ( hr == S_OK || FAILED( hr_save ) )
 				{
@@ -114,6 +117,9 @@ void CSearchManagerDlg::AddRule(BOOL bInclude, BOOL bDefault, const CString& sUR
 			hr = rule.AddTo( m_pScope );
 			if ( SUCCEEDED( hr ) )
 			{
+				const static CString saving_all = LoadString( IDS_SAVING_ALL );
+				SetStatus( saving_all );
+
 				const HRESULT hr_save = m_pScope->SaveAll();
 				if ( hr == S_OK || FAILED( hr_save ) )
 				{
@@ -223,6 +229,9 @@ void CSearchManagerDlg::Delete()
 
 			if ( deleted )
 			{
+				const static CString saving_all = LoadString( IDS_SAVING_ALL );
+				SetStatus( saving_all );
+
 				m_pScope->SaveAll();
 
 				m_bRefresh = true;
@@ -291,9 +300,6 @@ void CSearchManagerDlg::Delete()
 					if ( bWasStarted )
 					{
 						StartWindowsSearch();
-
-						// Update catalog
-						Default( false );
 					}
 				}
 			}
@@ -535,6 +541,9 @@ void CSearchManagerDlg::Default(bool bInteractive)
 					hr = pScope->RevertToDefaultScopes();
 					if ( SUCCEEDED( hr ) )
 					{
+						const static CString saving_all = LoadString( IDS_SAVING_ALL );
+						SetStatus( saving_all );
+
 						const HRESULT hr_save = pScope->SaveAll();
 						if ( hr == S_OK || FAILED( hr_save ) )
 						{

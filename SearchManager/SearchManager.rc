@@ -418,6 +418,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_REGISTRY_ERROR      "Registry key error: "
+    IDS_SAVING_ALL          "Saving changes to the indexer database..."
 END
 
 #endif    // Neutral (Default) resources

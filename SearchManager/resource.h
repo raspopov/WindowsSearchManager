@@ -72,6 +72,7 @@
 #define IDS_CONFIRM_VOLUME              190
 #define IDS_NONELEVATED                 191
 #define IDS_REGISTRY_ERROR              192
+#define IDS_SAVING_ALL                  193
 #define IDC_STATUS                      1000
 #define IDC_NAME                        1001
 #define IDC_LAST_INDEXED                1003
